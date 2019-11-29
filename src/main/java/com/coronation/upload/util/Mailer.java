@@ -29,6 +29,7 @@ public class Mailer {
     public void sendMailAsync(MailData mailData) throws MessagingException {
         mailData.setFrom(fromMail);
         mailData.sendMessage();
+        System.out.println("****Message Sent***");
     }
 
     @Async

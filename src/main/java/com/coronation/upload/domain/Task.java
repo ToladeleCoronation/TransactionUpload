@@ -58,6 +58,9 @@ public class Task {
     @Column(nullable = false)
     private Boolean reconcile = Boolean.FALSE;
 
+    @Column(nullable = false)
+    private Boolean bulkPayment = Boolean.FALSE;
+
     @Column(name="created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
 
@@ -213,5 +216,13 @@ public class Task {
     @Override
     public int hashCode() {
         return id.hashCode();
+    }
+
+    public Boolean getBulkPayment() {
+        return bulkPayment;
+    }
+
+    public void setBulkPayment(Boolean bulkPayment) {
+        this.bulkPayment = bulkPayment;
     }
 }

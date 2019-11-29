@@ -29,12 +29,10 @@ public class ScheduledTasks {
     @Scheduled(fixedRate = 60000)
     public void schedulePaymentTask() {
         processDueTasks();
-        processDueInsufficientBalance();
-
-
+        //processDueInsufficientBalance();
     }
 
-    //@Scheduled(fixedRate = 60000)
+   //@Scheduled(fixedRate = 60000)
     @Scheduled(cron = "0 0 12 * * ?")
     public void scheduleInsuuficientFundTask() {
         getAllTask();
@@ -56,6 +54,7 @@ public class ScheduledTasks {
     @Async
     public void processDueInsufficientBalance() {
         List<DataTable> dueTask = transactionService.getTableNames();
+        logger.info(JsonConverter.getJson(dueTask));
         dueTask.forEach(task -> {
             try {
                 transactionService.processInsufficientBalance(task);

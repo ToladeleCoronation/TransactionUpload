@@ -45,21 +45,21 @@ public interface TransactionService {
 
     Page<DataUpload> findAllUploads(BooleanExpression expression, Pageable pageable);
 
-    void insertData(List<DataColumn> columnData, DataUpload dataUpload) throws SQLException;
+    void insertData(List<DataColumn> columnData, DataUpload dataUpload,Task task) throws SQLException;
 
     String getAccountNumber(Object identifier, Task task, String accountNumber) throws Exception;
 
-    ResponseEntity<TransferResponses> processTransaction(Long ids, String account, Task task,String trxnid) throws SQLException;
+    ResponseEntity<TransferResponses> processTransaction(List <Long> ids, String account, Task task,String trxnid) throws SQLException;
 
     boolean reconciled(String identifier, String value, Map<String, String> reconciliationList);
 
-    Multimap<String, Long> getUnprocessedData(DataTable dataTable) throws SQLException, InvalidDataException;
+    Map<String, List<Long>> getUnprocessedData(DataTable dataTable) throws SQLException, InvalidDataException;
 
     void updateProcessedData(Long ids, DataTable dataTable, TransferResponses response,LienResponse responses) throws SQLException;
 
-    void updateProcessedDataA(Long ids, DataTable dataTable,TransferResponses response,String val) throws SQLException;
+    void updateProcessedDataA(Long ids, DataTable dataTable,TransferResponses response,String val,String lienResponse,String appcode,String accountNumber) throws SQLException;
 
-    void insertUnprocessedData(Long id, DataTable table, String accountNumber, String phoneNumber, BigDecimal amount,String creditAccount,String narration,LienResponse lienResponse,String trxnId) throws SQLException;
+    void insertUnprocessedData(List <Long> id, DataTable table, String accountNumber, String phoneNumber, BigDecimal amount,String creditAccount,String narration,LienResponse lienResponse,String trxnId) throws SQLException;
 
     @Transactional(propagation = Propagation.REQUIRED)
     TransferResponses transfer(TransferRequestt transferRequest) throws ApiException;

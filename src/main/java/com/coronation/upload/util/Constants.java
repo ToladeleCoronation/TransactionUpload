@@ -36,5 +36,7 @@ public class Constants {
     public static final String debit = "D";
 
     public static final String STAFF_ENTRUST_GROUP = "Coronation Group";
+    public static final String UPLOAD_CREATED = "uploadCreated";
+    public static final String UPLOAD_SUBJECT = "SMS UPLOAD NOTIFICATION";
 
 }

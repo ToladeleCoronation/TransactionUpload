@@ -34,7 +34,7 @@ public class DataLoader implements ApplicationListener<ContextRefreshedEvent> {
 	private BCryptPasswordEncoder encoder;
 
 	private Logger logger = LogManager.getLogger(DataLoader.class);
-	
+
 	@Override
 	public void onApplicationEvent(ContextRefreshedEvent event) {
 		seedRoles();

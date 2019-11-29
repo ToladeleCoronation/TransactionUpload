@@ -2,15 +2,17 @@ package com.coronation.upload.controllers;
 
 import com.coronation.upload.domain.DataUpload;
 import com.coronation.upload.domain.Task;
+import com.coronation.upload.domain.User;
 import com.coronation.upload.domain.enums.GenericStatus;
+import com.coronation.upload.domain.enums.RoleType;
 import com.coronation.upload.dto.ApprovalDto;
 import com.coronation.upload.exception.InvalidDataException;
 import com.coronation.upload.repo.predicate.CustomPredicateBuilder;
 import com.coronation.upload.repo.predicate.Operation;
 import com.coronation.upload.services.TaskService;
 import com.coronation.upload.services.TransactionService;
-import com.coronation.upload.util.GenericUtil;
-import com.coronation.upload.util.PageUtil;
+import com.coronation.upload.services.UserService;
+import com.coronation.upload.util.*;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -26,9 +28,14 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.mail.MessagingException;
 import javax.validation.Valid;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Created by Toyin on 8/1/19.
@@ -39,19 +46,28 @@ import java.sql.SQLException;
 public class UploadController {
     private TaskService taskService;
     private TransactionService transactionService;
+    private Mailer mailer;
+    private MailBuilder mailBuilder;
+    private UserService userService;
     private Logger logger = LogManager.getLogger(UploadController.class);
 
     @Autowired
-    public UploadController(TaskService taskService, TransactionService transactionService) {
+    public UploadController(TaskService taskService, TransactionService transactionService, Mailer mailer, MailBuilder mailBuilder, UserService userService) {
         this.taskService = taskService;
         this.transactionService = transactionService;
+        this.mailer = mailer;
+        this.mailBuilder = mailBuilder;
+        this.userService = userService;
     }
+
 
     @PreAuthorize("hasAnyRole('IT_ADMIN')")
     @PostMapping("/tasks/{taskId}/files")
     public ResponseEntity<DataUpload> upload(@PathVariable("taskId") Long taskId,
-                             @RequestParam("file") MultipartFile[] files) {
+                                             @RequestParam("file") MultipartFile[] files) {
         Task task = taskService.findById(taskId);
+        List<User> userList = new ArrayList<>();
+        userList = userService.findByRoleName(RoleType.OP_ADMIN.toString());
         if (task == null) {
             ResponseEntity.notFound().build();
         } else if (!task.getAccount().getStatus().equals(GenericStatus.ACTIVE)) {
@@ -60,7 +76,24 @@ public class UploadController {
             return ResponseEntity.badRequest().build();
         }
         try {
-            return ResponseEntity.ok(transactionService.uploadFile(files, task));
+            DataUpload dataUpload = transactionService.uploadFile(files, task);
+
+            String message = null;
+            userList.stream().filter(user -> user.getDeleted() == false)
+                    .collect(Collectors.toList());
+            for (User user : userList) {
+                Map<String, Object> variables = GenericUtil.getUploadDetails(dataUpload, user);
+                System.out.println("the values are: " + dataUpload.getSuccess() + " and " + dataUpload.getDuplicate() +
+                        " and " + dataUpload.getDuplicate() + " and " + dataUpload.getInvalid());
+                message = mailBuilder.build(Constants.UPLOAD_CREATED, variables);
+                System.out.println("****Email address is***** : " + user.getEmail());
+                try {
+                    mailer.mailUserAsync(user, message, Constants.UPLOAD_SUBJECT);
+                } catch (MessagingException e) {
+                    e.printStackTrace();
+                }
+            }
+            return ResponseEntity.ok(dataUpload);
         } catch (InvalidDataException e) {
             e.printStackTrace();
             logger.error(e.getMessage());
@@ -69,13 +102,14 @@ public class UploadController {
             e.printStackTrace();
             logger.error(e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+
         }
     }
 
     @PreAuthorize("hasAnyRole('OP_ADMIN')")
     @PostMapping("/{id}/approve")
     public ResponseEntity<DataUpload> approveUpload(@PathVariable("id") Long id,
-                            @RequestBody @Valid ApprovalDto approvalDto, BindingResult bindingResult) {
+                                                    @RequestBody @Valid ApprovalDto approvalDto, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
             return ResponseEntity.badRequest().build();
         }
@@ -101,8 +135,9 @@ public class UploadController {
     }
 
     @GetMapping("/{id}/download/{upload}")
-    public @ResponseBody byte[] downloadUploadFile(@PathVariable("id") Long id,
-                               @PathVariable("upload") Boolean upload) {
+    public @ResponseBody
+    byte[] downloadUploadFile(@PathVariable("id") Long id,
+                              @PathVariable("upload") Boolean upload) {
         DataUpload dataUpload = transactionService.findUploadById(id);
         if (dataUpload == null) {
             return new byte[0];
@@ -119,7 +154,8 @@ public class UploadController {
     }
 
     @GetMapping("/download/{fileName}")
-    public @ResponseBody byte[] downloadFile(@PathVariable("fileName") String fileName) {
+    public @ResponseBody
+    byte[] downloadFile(@PathVariable("fileName") String fileName) {
         try {
             return GenericUtil.pathToByteArray(GenericUtil.getStoragePath() + fileName);
         } catch (IOException ex) {
@@ -137,17 +173,17 @@ public class UploadController {
     }
 
     @GetMapping
-    public ResponseEntity<Page<DataUpload>> listAllUpload(@RequestParam(value="page", required = false, defaultValue = "0") int page,
-              @RequestParam(value="pageSize", defaultValue = "10") int pageSize,
-              @RequestParam(value="taskName", required = false) String taskName,
-              @RequestParam(value="uploadFile", required = false) String uploadFile,
-              @RequestParam(value="status", required = false) GenericStatus status) {
+    public ResponseEntity<Page<DataUpload>> listAllUpload(@RequestParam(value = "page", required = false, defaultValue = "0") int page,
+                                                          @RequestParam(value = "pageSize", defaultValue = "10") int pageSize,
+                                                          @RequestParam(value = "taskName", required = false) String taskName,
+                                                          @RequestParam(value = "uploadFile", required = false) String uploadFile,
+                                                          @RequestParam(value = "status", required = false) GenericStatus status) {
 
         BooleanExpression filter = new CustomPredicateBuilder<>("upload", DataUpload.class)
                 .with("task.name", Operation.LIKE, taskName)
                 .with("uploadFile", Operation.LIKE, uploadFile)
                 .with("status", Operation.ENUM, status).build();
-            Pageable pageRequest =
+        Pageable pageRequest =
                 PageUtil.createPageRequest(page, pageSize, Sort.by("createdAt").descending());
         return ResponseEntity.ok(transactionService.findAllUploads(filter, pageRequest));
     }

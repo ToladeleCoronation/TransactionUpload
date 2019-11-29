@@ -74,6 +74,7 @@ public class TaskServiceImpl implements TaskService {
         previous.setReconcile(task.getReconcile());
         previous.setDescription(task.getDescription());
         previous.setAmountInData(task.getAmountInData());
+        previous.setBulkPayment(task.getBulkPayment());
         previous.setAccountInData(task.getAccountInData());
         previous.setModifiedAt(LocalDateTime.now());
         return taskRepository.saveAndFlush(previous);

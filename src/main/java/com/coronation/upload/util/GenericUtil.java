@@ -1,5 +1,6 @@
 package com.coronation.upload.util;
 
+import com.coronation.upload.domain.DataUpload;
 import com.coronation.upload.domain.User;
 import com.coronation.upload.services.UserService;
 import org.apache.commons.io.IOUtils;
@@ -27,9 +28,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.format.FormatStyle;
 import java.time.temporal.ChronoUnit;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * Created by Toyin on 2/3/19.
@@ -51,6 +50,18 @@ public class GenericUtil {
         return LocalDateTime.parse(dateString, formatter);
     }
 
+    public static Map<String, Object> getUploadDetails(DataUpload dataUpload, User user) {
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("firstName", user.getFirstName());
+        variables.put("fileName", dataUpload.getUploadFile());
+        variables.put("reconFile", dataUpload.getUploadFile());
+        variables.put("successRecord", dataUpload.getSuccess());
+        variables.put("invalidRecords",dataUpload.getInvalid());
+        variables.put("unmatchedRecord", dataUpload.getUnmatched());
+        variables.put("duplicate", dataUpload.getDuplicate());
+        variables.put("exception", dataUpload.getExceptions());
+        return variables;
+    }
     public static String localDateTimeToString(LocalDateTime localDateTime) {
         return formatter.format(localDateTime);
     }

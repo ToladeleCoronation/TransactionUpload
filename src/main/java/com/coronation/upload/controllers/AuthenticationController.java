@@ -62,9 +62,9 @@ public class AuthenticationController {
             if (staffAuthenticated(loginUser)) {
                 String password = userService.generatePassword(loginUser.getUsername());
                 loginUser.setPassword(password);
-                logger.info("Logged staff in");
+                logger.info("Staff is logged in via AD");
             } else {
-                logger.info("Unable to log staff in");
+                logger.info("Staff log in via AD failed");
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
             }
         }

@@ -25,4 +25,5 @@ public interface UserService {
 	List<User> findByParam(String param, Pageable pageable);
 	Long countAll();
 	String generatePassword(String email);
+
 }
