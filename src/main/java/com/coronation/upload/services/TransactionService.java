@@ -53,13 +53,13 @@ public interface TransactionService {
 
     boolean reconciled(String identifier, String value, Map<String, String> reconciliationList);
 
-    Map<String, List<Long>> getUnprocessedData(DataTable dataTable) throws SQLException, InvalidDataException;
+    Map<String, List<Long>> getUnprocessedData(DataTable dataTable,Long upload_id) throws SQLException, InvalidDataException;
 
     void updateProcessedData(Long ids, DataTable dataTable, TransferResponses response,LienResponse responses) throws SQLException;
 
     void updateProcessedDataA(Long ids, DataTable dataTable,TransferResponses response,String val,String lienResponse,String appcode,String accountNumber) throws SQLException;
 
-    void insertUnprocessedData(List <Long> id, DataTable table, String accountNumber, String phoneNumber, BigDecimal amount,String creditAccount,String narration,LienResponse lienResponse,String trxnId) throws SQLException;
+    void insertUnprocessedSingle(Long id, DataTable table, String accountNumber, String phoneNumber, BigDecimal amount,String creditAccount,String narration,LienResponse lienResponse,String trxnId,String debitType) throws SQLException;
 
     @Transactional(propagation = Propagation.REQUIRED)
     TransferResponses transfer(TransferRequestt transferRequest) throws ApiException;
@@ -72,7 +72,7 @@ public interface TransactionService {
 
     void processInsufficientBalance(DataTable dataTable) throws InvalidDataException, SQLException;
 
-    List<InsufficientBalance> getUnprocessedDinsertataInsufficientFund(DataTable table) throws SQLException, InvalidDataException;
+    List<InsufficientBalance> getUnprocessedDinsertataInsufficientFund(DataTable table,DataUpload dataUpload) throws SQLException, InvalidDataException;
 
     ResponseEntity<LienResponse> processTransactionInsufficient(BigDecimal amount,String accountNumber,String val);
     ResponseEntity<LienResponse> removeLien(InsufficientBalance insufficientBalance);

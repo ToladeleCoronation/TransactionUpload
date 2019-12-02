@@ -174,7 +174,7 @@ public class TransactionServiceImpl implements TransactionService {
                 insertRowData(columns, unmatchedData);
             } else {
                 try {
-                    insertData(columns, upload,task);
+                    insertData(columns, upload, task);
                     if (upload.getSuccess() == null) {
                         upload.setSuccess(1);
                     } else {
@@ -314,7 +314,7 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
-    public void insertData(List<DataColumn> columnData, DataUpload dataUpload,Task task) throws SQLException {
+    public void insertData(List<DataColumn> columnData, DataUpload dataUpload, Task task) throws SQLException {
         String insertScript = generateInsertScript(columnData, dataUpload.getTask().getTable());
         PreparedStatement statement = null;
         try {
@@ -432,7 +432,7 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
-    public ResponseEntity<TransferResponses> processTransaction(List <Long> ids, String debitAccount, Task task, String trxnId)
+    public ResponseEntity<TransferResponses> processTransaction(List<Long> ids, String debitAccount, Task task, String trxnId)
             throws SQLException {
 
         TransferRequestt trxnRequest = new TransferRequestt();
@@ -553,7 +553,7 @@ public class TransactionServiceImpl implements TransactionService {
         StringBuilder builder = new StringBuilder("SELECT ").append(dataColumn.getName()).
                 append(" FROM custom.").append(task.getTable().getName()).append(" WHERE id = ?");
         PreparedStatement statement = connection.prepareStatement(builder.toString());
-        for (Long id: ids) {
+        for (Long id : ids) {
             try {
                 statement.setLong(1, id);
                 ResultSet resultSet = statement.executeQuery();
@@ -567,6 +567,7 @@ public class TransactionServiceImpl implements TransactionService {
         return sum;
 
     }
+
     private BigDecimal getDebitSumSingle(Long ids, Task task) throws SQLException {
         DataColumn dataColumn = task.getTable().getColumns().stream().
                 filter(c -> c.getAmountField()).findAny().orElse(null);
@@ -575,15 +576,15 @@ public class TransactionServiceImpl implements TransactionService {
                 append(" FROM custom.").append(task.getTable().getName()).append(" WHERE id = ?");
         PreparedStatement statement = connection.prepareStatement(builder.toString());
 
-            try {
-                statement.setLong(1, ids);
-                ResultSet resultSet = statement.executeQuery();
-                resultSet.next();
-                BigDecimal amount = resultSet.getBigDecimal(1);
-                sum = sum.add(amount);
-            } catch (SQLException ex) {
-                logger.error(ex.getMessage());
-            }
+        try {
+            statement.setLong(1, ids);
+            ResultSet resultSet = statement.executeQuery();
+            resultSet.next();
+            BigDecimal amount = resultSet.getBigDecimal(1);
+            sum = sum.add(amount);
+        } catch (SQLException ex) {
+            logger.error(ex.getMessage());
+        }
 
         return sum;
 
@@ -596,15 +597,16 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
-    public Map<String, List<Long>> getUnprocessedData(DataTable dataTable)
+    public Map<String, List<Long>> getUnprocessedData(DataTable dataTable, Long uploadId)
             throws SQLException, InvalidDataException {
         Optional<DataColumn> column =
                 dataTable.getColumns().stream().filter(dataColumn -> dataColumn.getIdentifier()).findAny();
+        System.out.println(uploadId + "**** hi");
         if (column.isPresent()) {
             PreparedStatement statement = null;
             try {
                 StringBuilder builder = new StringBuilder("SELECT * FROM custom.");
-                builder.append(dataTable.getName()).append(" WHERE approved = 1 and (processed = 0 || retry_flag = 'Y')");
+                builder.append(dataTable.getName()).append(" WHERE upload_id = '" + uploadId + "' and approved = 1 and debit_type=1 and (processed = 0 || retry_flag = 'Y')");
                 statement = connection.prepareStatement(builder.toString());
                 ResultSet resultSet = statement.executeQuery();
                 Map<String, List<Long>> idMap = new HashMap<>();
@@ -636,7 +638,9 @@ public class TransactionServiceImpl implements TransactionService {
                 if (statement != null) {
                     try {
                         statement.close();
-                    } catch (Exception ex) {ex.printStackTrace();}
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
                 }
             }
         } else {
@@ -646,15 +650,16 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
 
-    public Multimap<String, Long> getBulkUnprocessedData(DataTable dataTable)
+    public Multimap<String, Long> getBulkUnprocessedData(DataTable dataTable, Long uploadId)
             throws SQLException, InvalidDataException {
         Optional<DataColumn> column =
                 dataTable.getColumns().stream().filter(dataColumn -> dataColumn.getIdentifier()).findAny();
+        System.out.println(uploadId + "**** hi here");
         if (column.isPresent()) {
             PreparedStatement statement = null;
             try {
                 StringBuilder builder = new StringBuilder("SELECT * FROM custom.");
-                builder.append(dataTable.getName()).append(" WHERE approved = 1 and (processed = 0 || retry_flag = 'Y')");
+                builder.append(dataTable.getName()).append(" WHERE upload_id = '" + uploadId + "' and approved = 1 and debit_type=0 and (processed = 0 || retry_flag = 'Y')");
                 statement = connection.prepareStatement(builder.toString());
                 ResultSet resultSet = statement.executeQuery();
                 Multimap<String, Long> idMap = ArrayListMultimap.create();
@@ -747,13 +752,13 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
-    public void updateProcessedDataA(Long ids, DataTable dataTable, TransferResponses response, String trxnId,String lienResponse,String appcode,String accountNUmber)
+    public void updateProcessedDataA(Long ids, DataTable dataTable, TransferResponses response, String trxnId, String lienResponse, String appcode, String accountNUmber)
             throws SQLException {
 
         java.text.SimpleDateFormat sdf =
                 new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
-        String currentTime = sdf.format(LocalDateTime.now());
+        String currentTime = LocalDateTime.now().toString();
         if (ids != null) {
             PreparedStatement statement = null;
             try {
@@ -800,7 +805,7 @@ public class TransactionServiceImpl implements TransactionService {
         }
     }
 
-    public void updateProcessedDataBulk(List <Long> ids, DataTable dataTable, TransferResponses response, String trxnId,String resCode,String appCode,String accountNUmber)
+    public void updateProcessedDataBulk(List<Long> ids, DataTable dataTable, TransferResponses response, String trxnId, String resCode, String appCode, String accountNUmber)
             throws SQLException {
         if (ids != null) {
 
@@ -856,6 +861,7 @@ public class TransactionServiceImpl implements TransactionService {
             }
         }
     }
+
     @Override
     public TransferResponses transfer(TransferRequestt transferRequest) throws ApiException {
         ResponseEntity<TransferResponses> response = utilities.postTransfer(transferRequest);
@@ -873,11 +879,11 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     public void processTask(Task task) {
 
-        if (task.getBulkPayment()==true) {
+        if (task.getBulkPayment() == true) {
             System.out.println("i got here");
             bulkPayment(task);
 
-        } else if (task.getBulkPayment()==false) {
+        } else if (task.getBulkPayment() == false) {
             System.out.println("i got here now");
             singlePayment(task);
         }
@@ -887,20 +893,24 @@ public class TransactionServiceImpl implements TransactionService {
 
     private void bulkPayment(Task task) {
         try {
-            Map<String, List<Long>> unprocessed = getUnprocessedData(task.getTable());
+
+            DataUpload task1 = uploadRepository.findByTask(task);
+
+            System.out.println("**** upload id is: " + task1.getId());
+            Map<String, List<Long>> unprocessed = getUnprocessedData(task.getTable(), task1.getId());
             logger.info(JsonConverter.getJson(unprocessed));
             String testVal = null;
             String uniqueVal = null;
-            String pNum=null;
+            String pNum = null;
             BigDecimal currentval = new BigDecimal(0);
-            for (Map.Entry<String, List<Long>> entry: unprocessed.entrySet()) {
+            for (Map.Entry<String, List<Long>> entry : unprocessed.entrySet()) {
                 String accountNumber = null;
 
                 if (task.getAccountInData()) {
                     accountNumber = entry.getKey();
                 } else {
                     DataColumn identifierColumn = null;
-                    for (DataColumn column: task.getTable().getColumns()) {
+                    for (DataColumn column : task.getTable().getColumns()) {
                         if (column.getIdentifier()) {
                             identifierColumn = column;
                             break;
@@ -945,8 +955,8 @@ public class TransactionServiceImpl implements TransactionService {
                     } else {
                         String valGen = generateTransactionId();
                         String debitTrxnId = generateTransactionId1();
-                        String lienResponse=null;
-                        String appCode=null;
+                        String lienResponse = null;
+                        String appCode = null;
                         ResponseEntity<TransferResponses> responseEntity = processTransaction
                                 (entry.getValue(), accountNumber, task, debitTrxnId);
 
@@ -976,18 +986,17 @@ public class TransactionServiceImpl implements TransactionService {
                                     // System.out.println(task.getCharge()+ " this is it"+ amount);
                                 }
 
-                                insertUnprocessedData(entry.getValue(), task.getTable(), accountNumber, pNum, task.getCharge(), task.getAccount().getAccountNumber(), task.getNarration(), responseLien.getBody(), valGen);
-                            }
-                            else {
+                                insertUnprocessedSingle(entry.getValue().get(1), task.getTable(), accountNumber, testVal, currentval, task.getAccount().getAccountNumber(), task.getNarration(), responseLien.getBody(), valGen, "BULK");
+                            } else {
 
-                                    lienResponse=responseLien.getBody().getResponseDescription();
-                                    appCode=responseLien.getBody().getAppNumber();
+                                lienResponse = responseLien.getBody().getResponseDescription();
+                                appCode = responseLien.getBody().getAppNumber();
 
 
                             }
 
                         }
-                        updateProcessedDataBulk(entry.getValue(), task.getTable(), responseEntity.getBody(), debitTrxnId, lienResponse,appCode,accountNumber);
+                        updateProcessedDataBulk(entry.getValue(), task.getTable(), responseEntity.getBody(), debitTrxnId, lienResponse, appCode, accountNumber);
 
 
                         logger.info(JsonConverter.getJson(entry.getValue() + " value is this " + responseEntity.getBody()));
@@ -1008,7 +1017,12 @@ public class TransactionServiceImpl implements TransactionService {
 
     private void singlePayment(Task task) {
         try {
-            Multimap<String, Long> unprocessed = getBulkUnprocessedData(task.getTable());
+            Optional<DataUpload> task1 = uploadRepository.findById(task.getId());
+            if (!task1.isPresent()) {
+                throw new NoSuchElementException("Id not found");
+            }
+            System.out.println("**** upload id is: " + task1.get().getId());
+            Multimap<String, Long> unprocessed = getBulkUnprocessedData(task.getTable(), task1.get().getId());
             String testVal = null;
 
             for (Map.Entry<String, Long> entry : unprocessed.entries()) {
@@ -1064,8 +1078,8 @@ public class TransactionServiceImpl implements TransactionService {
                     } else {
                         String valGen = generateTransactionId();
                         String debitTrxnId = generateTransactionId1();
-                        String lienResponse=null;
-                        String appCode=null;
+                        String lienResponse = null;
+                        String appCode = null;
                         ResponseEntity<TransferResponses> responseEntity = processTransactionSingle
                                 (entry.getValue(), accountNumber, task, debitTrxnId);
 
@@ -1086,16 +1100,15 @@ public class TransactionServiceImpl implements TransactionService {
                             if (responseLien.getBody().getStatus().equals(Constants.STATUS)) {
                                 //updateProcessedData(entry.getValue(), task.getTable(), responseEntity.getBody(), responseLien.getBody());
 
-                                insertUnprocessedSingle(entry.getValue(), task.getTable(), accountNumber, pNum, amount, task.getAccount().getAccountNumber(), task.getNarration(), responseLien.getBody(), valGen);
-                            }
-                            else {
-                                lienResponse=responseLien.getBody().getResponseDescription();
-                                appCode=responseLien.getBody().getAppNumber();
+                                insertUnprocessedSingle(entry.getValue(), task.getTable(), accountNumber, testVal, amount, task.getAccount().getAccountNumber(), task.getNarration(), responseLien.getBody(), valGen, "SINGLE");
+                            } else {
+                                lienResponse = responseLien.getBody().getResponseDescription();
+                                appCode = responseLien.getBody().getAppNumber();
 
                             }
 
                         }
-                        updateProcessedDataA(entry.getValue(), task.getTable(), responseEntity.getBody(), debitTrxnId,lienResponse,appCode,accountNumber);
+                        updateProcessedDataA(entry.getValue(), task.getTable(), responseEntity.getBody(), debitTrxnId, lienResponse, appCode, accountNumber);
 
 
                         logger.info(JsonConverter.getJson(entry.getValue() + " value is this " + responseEntity.getBody()));
@@ -1130,8 +1143,8 @@ public class TransactionServiceImpl implements TransactionService {
 
     private String generateInsertScriptInsufficient(DataTable dataTable) {
         StringBuilder builder = new StringBuilder("INSERT INTO custom.");
-        builder.append(dataTable.getInsufficientBalance()).append("(upload_id,phone_number,account_number,credit_account,narration,mode,appnumber,msgdate,status_message,response_description,trxn_id");
-        builder.append(") VALUES(?,?,?,?,?,?,?,?,?,?,?) ");
+        builder.append(dataTable.getInsufficientBalance()).append("(upload_id,phone_number,account_number,credit_account,narration,mode,appnumber,msgdate,status_message,response_description,trxn_id,debit_type,amount");
+        builder.append(") VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?) ");
         return builder.toString();
     }
 
@@ -1142,65 +1155,34 @@ public class TransactionServiceImpl implements TransactionService {
         return builder.toString();
     }
 
+
     @Override
-    public void insertUnprocessedData(List <Long> id, DataTable table, String accountNumber, String phoneNumber, BigDecimal amount, String creditAccount, String narration, LienResponse lienResponse, String trxnid) throws SQLException {
+    public void insertUnprocessedSingle(Long ids, DataTable table, String accountNumber, String phoneNumber, BigDecimal amount, String creditAccount, String narration, LienResponse lienResponse, String trxnId, String debitType) throws SQLException {
         String insertScript = generateInsertScriptInsufficient(table);
         PreparedStatement statement = null;
         try {
 
-            if (!id.isEmpty()) {
-                for(Long ids: id) {
-                    statement = connection.prepareStatement(insertScript);
-                    statement.setLong(1, ids);
-                    statement.setString(2, phoneNumber);
-                    statement.setString(3, accountNumber);
-                    statement.setString(4, creditAccount);
-                    statement.setString(5, narration);
-                    statement.setString(6, lienResponse.getMode());
-                    statement.setString(7, lienResponse.getAppNumber());
-                    statement.setString(8, lienResponse.getMsgDateTime());
-                    statement.setString(9, lienResponse.getStatus());
-                    statement.setString(10, lienResponse.getResponseDescription());
-                    statement.setString(11, trxnid);
+            if (ids != null) {
 
-                    statement.executeUpdate();
-                }
-                }
-            } finally{
-                if (statement != null) {
-                    try {
-                        statement.close();
-                    } catch (Exception ex) {
-                        ex.printStackTrace();
-                    }
-                }
-            }
-        }
+                statement = connection.prepareStatement(insertScript);
+                statement.setLong(1, ids);
+                statement.setString(2, phoneNumber);
+                statement.setString(3, accountNumber);
+                statement.setString(4, creditAccount);
+                statement.setString(5, narration);
+                statement.setString(6, lienResponse.getMode());
+                statement.setString(7, lienResponse.getAppNumber());
+                statement.setString(8, lienResponse.getMsgDateTime());
+                statement.setString(9, lienResponse.getStatus());
+                statement.setString(10, lienResponse.getResponseDescription());
+                statement.setString(11, trxnId);
+                statement.setString(12, debitType);
+                statement.setBigDecimal(13, amount);
 
-    public void insertUnprocessedSingle(Long ids, DataTable table, String accountNumber, String phoneNumber, BigDecimal amount, String creditAccount, String narration, LienResponse lienResponse, String trxnid) throws SQLException {
-        String insertScript = generateInsertScriptInsufficient(table);
-        PreparedStatement statement = null;
-        try {
-
-            if (ids !=null) {
-
-                    statement = connection.prepareStatement(insertScript);
-                    statement.setLong(1, ids);
-                    statement.setString(2, phoneNumber);
-                    statement.setString(3, accountNumber);
-                    statement.setString(4, creditAccount);
-                    statement.setString(5, narration);
-                    statement.setString(6, lienResponse.getMode());
-                    statement.setString(7, lienResponse.getAppNumber());
-                    statement.setString(8, lienResponse.getMsgDateTime());
-                    statement.setString(9, lienResponse.getStatus());
-                    statement.setString(10, lienResponse.getResponseDescription());
-                    statement.setString(11, trxnid);
-
-                    statement.executeUpdate();
+                statement.executeUpdate();
 
             }
-        } finally{
+        } finally {
             if (statement != null) {
                 try {
                     statement.close();
@@ -1219,35 +1201,51 @@ public class TransactionServiceImpl implements TransactionService {
     @Async
     @Override
     public void processInsufficientBalance(DataTable dataTable) throws InvalidDataException, SQLException {
-        List<InsufficientBalance> unprocessed = getUnprocessedDinsertataInsufficientFund(dataTable);
 
 
-        for (InsufficientBalance insufficientBalance : unprocessed) {
-            String trxn = generateTransactionId1();
+        Optional<Task> task = taskRepository.findByTable(dataTable);
+        if (!task.isPresent()) {
+            throw new NoSuchElementException("Id not found");
+        }
 
-            if (confirmSufficientBalance(insufficientBalance)) {
-                ResponseEntity<LienResponse> responseLien = removeLien(insufficientBalance);
-                logger.info("REMOVE LIENT====>" + JsonConverter.getJson(responseLien));
-                if (responseLien.getBody().getStatus().equals(Constants.STATUS)) {
-                    ResponseEntity<TransferResponses> responseEntity = processTransactionInsufficient(insufficientBalance);
-                    logger.info("TRANSFER API RESPONSE==>>:  " + JsonConverter.getJson(responseEntity.getBody()));
+        DataUpload dataUpload = uploadRepository.findByTask(task.get());
 
-                    if (responseEntity.getBody().getResponseCode().equals(Constants.STATUS)) {
-                        logger.info("Updating insufficient balance==>>:  " + JsonConverter.getJson(responseEntity.getBody()));
-                        updateProcessedInsufficientBalance(insufficientBalance, dataTable, responseEntity.getBody(), trxn);
-                    }
-                } else {
-                    ResponseEntity<TransferResponses> responseEntity = processTransactionInsufficient(insufficientBalance);
-                    logger.info("TRANSFER API RESPONSE==>>:  " + JsonConverter.getJson(responseEntity.getBody()));
-                    if (responseEntity.getBody().getResponseCode().equals(Constants.STATUS)) {
-                        logger.info("Updating insufficient balance==>>:  " + JsonConverter.getJson(responseEntity.getBody()));
-                        updateProcessedInsufficientBalance(insufficientBalance, dataTable, responseEntity.getBody(), trxn);
+
+        updateInsufficientSingle(dataTable, dataUpload);
+
+    }
+
+    void updateInsufficientSingle(DataTable dataTable, DataUpload dataUpload) throws SQLException, InvalidDataException {
+        List<InsufficientBalance> unprocessed = getUnprocessedDinsertataInsufficientFund(dataTable, dataUpload);
+
+        if (dataUpload != null) {
+            for (InsufficientBalance insufficientBalance : unprocessed) {
+                String trxn = generateTransactionId1();
+
+                if (confirmSufficientBalance(insufficientBalance)) {
+                    ResponseEntity<LienResponse> responseLien = removeLien(insufficientBalance);
+                    logger.info("REMOVE LIENT====>" + JsonConverter.getJson(responseLien));
+                    if (responseLien.getBody().getStatus().equals(Constants.STATUS)) {
+                        ResponseEntity<TransferResponses> responseEntity = processTransactionInsufficient(insufficientBalance);
+                        logger.info("TRANSFER API RESPONSE==>>:  " + JsonConverter.getJson(responseEntity.getBody()));
+
+                        if (responseEntity.getBody().getResponseCode().equals(Constants.STATUS)) {
+                            logger.info("Updating insufficient balance==>>:  " + JsonConverter.getJson(responseEntity.getBody()));
+                            updateProcessedInsufficientBalance(insufficientBalance, dataTable, responseEntity.getBody(), trxn);
+                        }
+                    } else {
+                        ResponseEntity<TransferResponses> responseEntity = processTransactionInsufficient(insufficientBalance);
+                        logger.info("TRANSFER API RESPONSE==>>:  " + JsonConverter.getJson(responseEntity.getBody()));
+                        if (responseEntity.getBody().getResponseCode().equals(Constants.STATUS)) {
+                            logger.info("Updating insufficient balance==>>:  " + JsonConverter.getJson(responseEntity.getBody()));
+                            updateProcessedInsufficientBalance(insufficientBalance, dataTable, responseEntity.getBody(), trxn);
+                        }
                     }
                 }
             }
         }
-
     }
+
 
     private Boolean confirmSufficientBalance(InsufficientBalance insufficientBalance) {
         AccountDetailRequest accountDetailRequest = new AccountDetailRequest(insufficientBalance.getAccountNumber());
@@ -1267,15 +1265,17 @@ public class TransactionServiceImpl implements TransactionService {
 
 
     @Override
-    public List<InsufficientBalance> getUnprocessedDinsertataInsufficientFund(DataTable datatable) throws SQLException, InvalidDataException {
+    public List<InsufficientBalance> getUnprocessedDinsertataInsufficientFund(DataTable datatable, DataUpload dataUpload) throws SQLException, InvalidDataException {
+
         Optional<DataColumn> column = datatable.getColumns().stream().filter(dataColumn -> dataColumn.getIdentifier()).findAny();
         List<InsufficientBalance> insufficientBalances = new ArrayList<>();
 
-        if (column.isPresent()) {
+        if (column.isPresent() && dataUpload != null) {
             PreparedStatement statement = null;
             try {
                 StringBuilder builder = new StringBuilder("SELECT * FROM custom.");
-                builder.append(datatable.getInsufficientBalance()).append(" WHERE processed = 0");
+                builder.append(datatable.getInsufficientBalance()).append(" WHERE " +
+                        "upload_id in (select id from custom.").append(datatable.getName()).append("  where upload_id='" + dataUpload.getId() + "') and processed = 0");
                 statement = connection.prepareStatement(builder.toString());
                 ResultSet resultSet = statement.executeQuery();
                 Multimap<String, Long> idMap = ArrayListMultimap.create();
@@ -1303,9 +1303,11 @@ public class TransactionServiceImpl implements TransactionService {
                 }
             }
         } else {
-            throw new InvalidDataException("No identifier found in data columns");
+            System.out.println("Value not present in getUnprocessedDinsertataInsufficientFund method ");
+            return null;
         }
     }
+
 
     @Override
     public ResponseEntity<LienResponse> processTransactionInsufficient(BigDecimal amount, String accountNumber, String trxnId) {
@@ -1363,6 +1365,43 @@ public class TransactionServiceImpl implements TransactionService {
                 builder.append(dataTable.getInsufficientBalance()).append(" SET processed=?, response_code = ?, " +
                         "response_message = ?, tranid=?," +
                         " transaction_date=?,trxnfer_id=?  where id=?");
+
+                statement = connection.prepareStatement(builder.toString());
+                statement.setBoolean(1,
+                        true);
+                statement.setString(2, transferResponses.getResponseCode());
+                statement.setString(3, transferResponses.getResponseDescription());
+                statement.setString(4, transferResponses.getTranId());
+                statement.setString(5,
+                        transferResponses.getTranDateTime());
+                statement.setString(6,
+                        trxnId);
+                statement.setLong(7,
+                        insufficientBalance.getId());
+
+
+                statement.executeUpdate();
+            } finally {
+                if (statement != null) {
+                    try {
+                        statement.close();
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+                }
+            }
+        }
+    }
+
+    public void updateProcessedInsufficientBalanceBulk(InsufficientBalance insufficientBalance, DataTable dataTable, TransferResponses transferResponses, String trxnId, DataUpload dataUpload) throws SQLException {
+        if (insufficientBalance.getId() != null) {
+            PreparedStatement statement = null;
+            try {
+                StringBuilder builder = new StringBuilder("UPDATE custom.");
+                builder.append(dataTable.getInsufficientBalance()).append(" SET processed=?, response_code = ?, " +
+                        "response_message = ?, tranid=?," +
+                        " transaction_date=?,trxnfer_id=?  where account_number=? and upload_id " +
+                        "in (select id from custom.").append(dataTable.getName() + " where upload_id='" + dataUpload.getId() + "')");
 
                 statement = connection.prepareStatement(builder.toString());
                 statement.setBoolean(1,
@@ -1472,18 +1511,17 @@ public class TransactionServiceImpl implements TransactionService {
             ResultSet resultSet = statement.executeQuery();
 
             while (resultSet.next()) {
-                System.out.println(resultSet.getString(task.getAccountColumn()).trim()+ " and "+resultSet.getString(task.getFetchColumn()) );
+                System.out.println(resultSet.getString(task.getAccountColumn()).trim() + " and " + resultSet.getString(task.getFetchColumn()));
                 numberHolder.put(resultSet.getString(task.getAccountColumn()).trim(), resultSet.getString(task.getFetchColumn()).trim());
             }
 
             for (Map.Entry acctDetails : numberHolder.entries()) {
                 phoneVal = acctDetails.getValue().toString().replaceAll("[(-),+]", "");
                 phoneVal = phoneVal.replaceAll(" ", "");
-                if(phoneVal.length()>10) {
+                if (phoneVal.length() > 10) {
                     phoneVal = phoneVal.substring(phoneVal.length() - 10);
                     currentNumberHolder.put(acctDetails.getKey().toString(), phoneVal);
-                }
-                else {
+                } else {
                     currentNumberHolder.put(acctDetails.getKey().toString(), phoneVal);
                 }
             }

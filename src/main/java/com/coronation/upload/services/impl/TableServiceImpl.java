@@ -130,8 +130,8 @@ public class TableServiceImpl implements TableService {
             builder.append(", ");
         });
         builder.append("upload_id bigint(20) NOT NULL, approved bit(1) NOT NULL DEFAULT 0, " +
-                "processed bit(1) NOT NULL DEFAULT 0,trxn_id varchar(50), transaction_id varchar(50),debit_type bit(1) NOT NULL DEFAULT 0,transaction_date varchar(50), retry_flag varchar(2), response_code varchar(10), " +
-                "response_message varchar(255),lien_response_description varchar(255),lien_appcode varchar(200),lien_date DATETIME, " +
+                "processed bit(1) NOT NULL DEFAULT 0,trxn_id varchar(50), transaction_id varchar(50),account_number varchar(15),debit_type bit(1) NOT NULL DEFAULT 0,transaction_date varchar(50), retry_flag varchar(2), response_code varchar(10), " +
+                "response_message varchar(255),lien_response_description varchar(255),lien_appcode varchar(200),lien_date varchar(50), " +
                 "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`id`) ");
         return builder.toString();
     }
@@ -207,7 +207,7 @@ public class TableServiceImpl implements TableService {
 
         builder.append("upload_id bigint(20) NOT NULL, " +
                 "processed bit(1) NOT NULL DEFAULT 0,phone_number varchar(15),account_number varchar(15),credit_account varchar(20), narration varchar(50),amount DECIMAL(13,0), " +
-                "appnumber varchar(30),trxn_id varchar(30), mode varchar(15),msgdate varchar(25),status_message varchar(50),response_description varchar(50),response_code varchar(20),response_message varchar(50),transaction_date varchar(30),tranid varchar(10),trxnfer_id varchar(50)," +
+                "appnumber varchar(30),trxn_id varchar(30),debit_type varchar(15), mode varchar(15),msgdate varchar(25),status_message varchar(50),response_description varchar(50),response_code varchar(20),response_message varchar(50),transaction_date varchar(30),tranid varchar(10),trxnfer_id varchar(50)," +
                 "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`id`) ");
         return builder.toString();
     }

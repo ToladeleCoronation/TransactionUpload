@@ -29,7 +29,7 @@ public class ScheduledTasks {
     @Scheduled(fixedRate = 60000)
     public void schedulePaymentTask() {
         processDueTasks();
-        //processDueInsufficientBalance();
+        processDueInsufficientBalance();
     }
 
    //@Scheduled(fixedRate = 60000)
