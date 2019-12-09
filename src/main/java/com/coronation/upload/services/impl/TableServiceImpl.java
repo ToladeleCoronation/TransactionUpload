@@ -164,6 +164,7 @@ public class TableServiceImpl implements TableService {
 
     @Override
     public DataTable findById(Long id) {
+        System.out.println(id+ " this is the id");
         return tableRepository.findById(id).orElse(null);
     }
 

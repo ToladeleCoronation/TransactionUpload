@@ -284,10 +284,10 @@ public class TransactionServiceImpl implements TransactionService {
     private String saveExcelDataLog(DataUpload dataUpload, List<LogExporter> data, String filePrefix)
             throws IOException {
         filePrefix = filePrefix + "_" + LocalDateTime.now().toString();
-        filePrefix=filePrefix.replaceAll(":","").replaceAll("-","").replaceAll(",","");
+        filePrefix = filePrefix.replaceAll(":", "").replaceAll(",", "").replaceAll("-", "");
         ExcelSaver.createLogFileReport(Constants.logHeader(), data,
                 GenericUtil.getStoragePath() + filePrefix);
-        System.out.println(filePrefix+ " i got here again and again");
+        System.out.println(filePrefix + " i got here again and again");
         return filePrefix;
     }
 
@@ -298,7 +298,7 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
 
-    private List<LogExporter> logData(Task task) throws SQLException {
+    private List<LogExporter> logData(Task task) throws SQLException{
         List<LogExporter> logExporter = new ArrayList<>();
         String identifier = null;
         for (DataColumn column : task.getTable().getColumns()) {
@@ -306,6 +306,8 @@ public class TransactionServiceImpl implements TransactionService {
                 identifier = column.getName();
             }
         }
+        PreparedStatement statement = null;
+
         System.out.println("hi :" + identifier + " again " + task.getTable().getName());
 
         StringBuilder builder = new StringBuilder("select *,").append("count(" + identifier + ") as count from ").
@@ -313,25 +315,35 @@ public class TransactionServiceImpl implements TransactionService {
                 append(task.getTable().getName()).append(" group by " + identifier + "");
         System.out.println(builder.toString() + "  aggaaaainn");
 
+        try {
+            statement = connection.prepareStatement(builder.toString());
+            ResultSet resultSet = statement.executeQuery();
 
-        PreparedStatement statement = connection.prepareStatement(builder.toString());
-        ResultSet resultSet = statement.executeQuery();
-
-        while (resultSet.next()) {
-            LogExporter logExporter1 = new LogExporter();
-            if (resultSet.getString("account_number") != null) {
-                logExporter1.setAccountNumber(resultSet.getString("account_number"));
-            } else {
-                logExporter1.setAccountNumber("Account not found");
+            while (resultSet.next()) {
+                LogExporter logExporter1 = new LogExporter();
+                if (resultSet.getString("account_number") != null) {
+                    logExporter1.setAccountNumber(resultSet.getString("account_number"));
+                } else {
+                    logExporter1.setAccountNumber("Account not found");
+                }
+                logExporter1.setCount(String.valueOf(resultSet.getInt("count")));
+                logExporter1.setPhoneNumber(resultSet.getString(identifier));
+                logExporter1.setAmount(String.valueOf(resultSet.getBigDecimal("amount")));
+                logExporter1.setStatus(resultSet.getString("response_message"));
+                logExporter.add(logExporter1);
             }
-
-            logExporter1.setPhoneNumber(resultSet.getString(identifier));
-            logExporter1.setAmount(String.valueOf(resultSet.getBigDecimal("amount")));
-            logExporter1.setStatus(resultSet.getString("response_message"));
-            logExporter.add(logExporter1);
+        } finally {
+            if (statement != null) {
+                try {
+                    statement.close();
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            }
         }
 
         return logExporter;
+
 
     }
 
@@ -1031,35 +1043,25 @@ public class TransactionServiceImpl implements TransactionService {
                         String debitTrxnId = generateTransactionId1();
                         String lienResponse = null;
                         String appCode = null;
+                        if (task.getAmountInData()) {
+                            currentval = getDebitSum(entry.getValue(), task);
+
+                            // System.out.println(amount+ "what are you doing here");
+
+                        } else {
+                            currentval = task.getCharge().multiply(new BigDecimal(entry.getValue().size()));
+
+                            // System.out.println(task.getCharge()+ " this is it"+ amount);
+                        }
                         ResponseEntity<TransferResponses> responseEntity = processTransaction
                                 (entry.getValue(), accountNumber, task, debitTrxnId);
 
                         if (responseEntity.getBody().getResponseDescription().contains(Constants.INSUFFICIENT_FUND)) {
 
-                            if (task.getAmountInData()) {
-                                currentval = getDebitSum(entry.getValue(), task);
-
-                                // System.out.println(amount+ "what are you doing here");
-
-                            } else {
-                                currentval = task.getCharge().multiply(new BigDecimal(entry.getValue().size()));
-
-                                // System.out.println(task.getCharge()+ " this is it"+ amount);
-                            }
                             ResponseEntity<LienResponse> responseLien = processTransactionInsufficient(currentval, accountNumber, valGen);
                             logger.info("My value==>>>>: " + JsonConverter.getJson(responseLien));
                             if (responseLien.getBody().getStatus().equals(Constants.STATUS)) {
                                 //updateProcessedData(entry.getValue(), task.getTable(), responseEntity.getBody(), responseLien.getBody());
-                                if (task.getAmountInData()) {
-                                    currentval = getDebitSum(entry.getValue(), task);
-
-                                    // System.out.println(amount+ "what are you doing here");
-
-                                } else {
-                                    currentval = task.getCharge().multiply(new BigDecimal(entry.getValue().size()));
-                                    // System.out.println(task.getCharge()+ " this is it"+ amount);
-                                }
-
                                 insertUnprocessedSingle(entry.getValue().get(0), task.getTable(), accountNumber, testVal, currentval, task.getAccount().getAccountNumber(), getLastDayAndYear(), responseLien.getBody(), valGen, "BULK");
                             } else {
 
@@ -1170,21 +1172,21 @@ public class TransactionServiceImpl implements TransactionService {
                         String debitTrxnId = generateTransactionId1();
                         String lienResponse = null;
                         String appCode = null;
+                        if (task.getAmountInData()) {
+                            amount = getDebitSumSingle(entry.getValue(), task);
+
+                            // System.out.println(amount+ "what are you doing here");
+
+                        } else {
+                            amount = task.getCharge().multiply(new BigDecimal(1));
+
+                            // System.out.println(task.getCharge()+ " this is it"+ amount);
+                        }
                         ResponseEntity<TransferResponses> responseEntity = processTransactionSingle
                                 (entry.getValue(), accountNumber, task, debitTrxnId);
 
                         if (responseEntity.getBody().getResponseDescription().contains(Constants.INSUFFICIENT_FUND)) {
 
-                            if (task.getAmountInData()) {
-                                amount = getDebitSumSingle(entry.getValue(), task);
-
-                                // System.out.println(amount+ "what are you doing here");
-
-                            } else {
-                                amount = task.getCharge().multiply(new BigDecimal(1));
-
-                                // System.out.println(task.getCharge()+ " this is it"+ amount);
-                            }
                             ResponseEntity<LienResponse> responseLien = processTransactionInsufficient(amount, accountNumber, valGen);
                             logger.info("My value==>>>>: " + JsonConverter.getJson(responseLien));
                             if (responseLien.getBody().getStatus().equals(Constants.STATUS)) {
