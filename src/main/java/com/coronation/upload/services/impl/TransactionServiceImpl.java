@@ -8,10 +8,7 @@ import com.coronation.upload.domain.enums.JobPeriod;
 import com.coronation.upload.dto.*;
 import com.coronation.upload.exception.ApiException;
 import com.coronation.upload.exception.InvalidDataException;
-import com.coronation.upload.repo.ScheduleRepository;
-import com.coronation.upload.repo.TableRepository;
-import com.coronation.upload.repo.TaskRepository;
-import com.coronation.upload.repo.UploadRepository;
+import com.coronation.upload.repo.*;
 import com.coronation.upload.services.TransactionService;
 import com.coronation.upload.util.*;
 import com.google.common.collect.ArrayListMultimap;
@@ -26,6 +23,7 @@ import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.InputStreamSource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -34,13 +32,18 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.mail.MessagingException;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.sql.*;
+import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.Date;
+import java.util.stream.Collectors;
 
 /**
  * Created by Toyin on 7/26/19.
@@ -53,6 +56,9 @@ public class TransactionServiceImpl implements TransactionService {
     private ScheduleRepository scheduleRepository;
     private TaskRepository taskRepository;
     private TableRepository tableRepository;
+    private MailBuilder mailBuilder;
+    private UserRepository userRepository;
+    private Mailer mailer;
     @Value("${app.secret.key}")
     private String appKey;
 
@@ -62,16 +68,23 @@ public class TransactionServiceImpl implements TransactionService {
     @Value("${app.secret.reasonCode}")
     private String reasonCode;
 
+    @Value("${app.smsMessage}")
+    private String smsMessage;
+
     private Logger logger = LogManager.getLogger(TransactionServiceImpl.class);
 
     @Autowired
-    public TransactionServiceImpl(Connection connection, Utilities utilities, UploadRepository uploadRepository, ScheduleRepository scheduleRepository, TaskRepository taskRepository, TableRepository tableRepository) {
+    public TransactionServiceImpl(Connection connection, Utilities utilities, UploadRepository uploadRepository, ScheduleRepository scheduleRepository, TaskRepository taskRepository, TableRepository tableRepository, MailBuilder mailBuilder,
+                                  Mailer mailer, UserRepository userRepository) {
         this.connection = connection;
         this.utilities = utilities;
         this.uploadRepository = uploadRepository;
         this.scheduleRepository = scheduleRepository;
         this.taskRepository = taskRepository;
         this.tableRepository = tableRepository;
+        this.mailBuilder = mailBuilder;
+        this.mailer = mailer;
+        this.userRepository = userRepository;
     }
 
 
@@ -228,9 +241,18 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
-    public DataUpload rejectFile(DataUpload dataUpload) {
+    public DataUpload rejectFile(DataUpload dataUpload) throws SQLException {
         dataUpload.setStatus(GenericStatus.REJECTED);
         dataUpload.setModifiedAt(LocalDateTime.now());
+        StringBuilder builder = new StringBuilder("Insert into ").append(dataUpload.getTask().getTable().getRejected())
+                .append(" select * from ").append(dataUpload.getTask().getTable().getName())
+                .append(" where upload_id='" + dataUpload.getId() + "'");
+        PreparedStatement statement = connection.prepareStatement(builder.toString());
+        statement.executeUpdate();
+        StringBuilder builder1 = new StringBuilder("delete from ").append(dataUpload.getTask().getTable().getName())
+                .append(" where upload_id='" + dataUpload.getId() + "' ");
+        PreparedStatement statements = connection.prepareStatement(builder1.toString());
+        statements.executeUpdate();
         return uploadRepository.saveAndFlush(dataUpload);
     }
 
@@ -259,10 +281,58 @@ public class TransactionServiceImpl implements TransactionService {
         return fileName;
     }
 
+    private String saveExcelDataLog(DataUpload dataUpload, List<LogExporter> data, String filePrefix)
+            throws IOException {
+        filePrefix = filePrefix + "_" + LocalDateTime.now().toString();
+        filePrefix=filePrefix.replaceAll(":","").replaceAll("-","").replaceAll(",","");
+        ExcelSaver.createLogFileReport(Constants.logHeader(), data,
+                GenericUtil.getStoragePath() + filePrefix);
+        System.out.println(filePrefix+ " i got here again and again");
+        return filePrefix;
+    }
+
     private void insertRowData(List<DataColumn> dataColumns, List<List<String>> dataList) {
         List<String> data = new ArrayList<>();
         dataColumns.forEach(c -> data.add(c.getValue()));
         dataList.add(data);
+    }
+
+
+    private List<LogExporter> logData(Task task) throws SQLException {
+        List<LogExporter> logExporter = new ArrayList<>();
+        String identifier = null;
+        for (DataColumn column : task.getTable().getColumns()) {
+            if (column.getIdentifier()) {
+                identifier = column.getName();
+            }
+        }
+        System.out.println("hi :" + identifier + " again " + task.getTable().getName());
+
+        StringBuilder builder = new StringBuilder("select *,").append("count(" + identifier + ") as count from ").
+                append(" custom.").
+                append(task.getTable().getName()).append(" group by " + identifier + "");
+        System.out.println(builder.toString() + "  aggaaaainn");
+
+
+        PreparedStatement statement = connection.prepareStatement(builder.toString());
+        ResultSet resultSet = statement.executeQuery();
+
+        while (resultSet.next()) {
+            LogExporter logExporter1 = new LogExporter();
+            if (resultSet.getString("account_number") != null) {
+                logExporter1.setAccountNumber(resultSet.getString("account_number"));
+            } else {
+                logExporter1.setAccountNumber("Account not found");
+            }
+
+            logExporter1.setPhoneNumber(resultSet.getString(identifier));
+            logExporter1.setAmount(String.valueOf(resultSet.getBigDecimal("amount")));
+            logExporter1.setStatus(resultSet.getString("response_message"));
+            logExporter.add(logExporter1);
+        }
+
+        return logExporter;
+
     }
 
     @Override
@@ -434,7 +504,7 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     public ResponseEntity<TransferResponses> processTransaction(List<Long> ids, String debitAccount, Task task, String trxnId)
             throws SQLException {
-
+        GenericUtil genericUtil = new GenericUtil();
         TransferRequestt trxnRequest = new TransferRequestt();
         List<Recs> reequest = new ArrayList<>();
         Recs rec = new Recs();
@@ -467,7 +537,7 @@ public class TransactionServiceImpl implements TransactionService {
         }
         credit.setCurrencyCode(Constants.accountCode);
         rec.setTrnAmt(credit);
-        rec.setTrnParticulars(task.getNarration());
+        rec.setTrnParticulars(getLastDayAndYear());
         //request.setUniqueIdentifier(generateTransactionId());
 
         reequest.add(rec);
@@ -477,7 +547,7 @@ public class TransactionServiceImpl implements TransactionService {
         recDeb.setSerialNum(Constants.serialNum2);
         debit1.setCurrencyCode(Constants.accountCode);
         recDeb.setTrnAmt(debit1);
-        recDeb.setTrnParticulars(task.getNarration());
+        recDeb.setTrnParticulars(getLastDayAndYear());
 
         reequest.add(recDeb);
         trxnRequest.setRecs(reequest);
@@ -491,7 +561,7 @@ public class TransactionServiceImpl implements TransactionService {
 
     public ResponseEntity<TransferResponses> processTransactionSingle(Long ids, String debitAccount, Task task, String trxnId)
             throws SQLException {
-
+        GenericUtil genericUtil = new GenericUtil();
         TransferRequestt trxnRequest = new TransferRequestt();
         List<Recs> reequest = new ArrayList<>();
         Recs rec = new Recs();
@@ -523,7 +593,7 @@ public class TransactionServiceImpl implements TransactionService {
         }
         credit.setCurrencyCode(Constants.accountCode);
         rec.setTrnAmt(credit);
-        rec.setTrnParticulars(task.getNarration());
+        rec.setTrnParticulars(getLastDayAndYear());
         //request.setUniqueIdentifier(generateTransactionId());
 
         reequest.add(rec);
@@ -534,7 +604,7 @@ public class TransactionServiceImpl implements TransactionService {
         debit1.setCurrencyCode(Constants.accountCode);
 
         recDeb.setTrnAmt(debit1);
-        recDeb.setTrnParticulars(task.getNarration());
+        recDeb.setTrnParticulars(getLastDayAndYear());
 
         reequest.add(recDeb);
         trxnRequest.setRecs(reequest);
@@ -752,7 +822,7 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
-    public void updateProcessedDataA(Long ids, DataTable dataTable, TransferResponses response, String trxnId, String lienResponse, String appcode, String accountNUmber)
+    public void updateProcessedDataA(Long ids, DataTable dataTable, TransferResponses response, String trxnId, String lienResponse, String appcode, String accountNUmber, BigDecimal amount)
             throws SQLException {
 
         java.text.SimpleDateFormat sdf =
@@ -765,7 +835,7 @@ public class TransactionServiceImpl implements TransactionService {
                 StringBuilder builder = new StringBuilder("UPDATE custom.");
                 builder.append(dataTable.getName()).append(" SET transaction_id = ?,transaction_date=?, response_code = ?, " +
                         "response_message = ?," +
-                        " processed = ?, retry_flag = ?,trxn_id=?,lien_response_description=?,lien_appcode=?,lien_date=?,account_number=? WHERE id=? ");
+                        " processed = ?, retry_flag = ?,trxn_id=?,lien_response_description=?,lien_appcode=?,lien_date=?,account_number=?,amount=? WHERE id=? ");
 
                 statement = connection.prepareStatement(builder.toString());
                 statement.setString(1,
@@ -790,7 +860,9 @@ public class TransactionServiceImpl implements TransactionService {
                         currentTime);
                 statement.setString(11,
                         accountNUmber);
-                statement.setLong(12, ids);
+                statement.setBigDecimal(12,
+                        amount);
+                statement.setLong(13, ids);
 
                 statement.executeUpdate();
             } finally {
@@ -805,7 +877,7 @@ public class TransactionServiceImpl implements TransactionService {
         }
     }
 
-    public void updateProcessedDataBulk(List<Long> ids, DataTable dataTable, TransferResponses response, String trxnId, String resCode, String appCode, String accountNUmber)
+    public void updateProcessedDataBulk(List<Long> ids, DataTable dataTable, TransferResponses response, String trxnId, String resCode, String appCode, String accountNUmber, BigDecimal amount)
             throws SQLException {
         if (ids != null) {
 
@@ -816,7 +888,7 @@ public class TransactionServiceImpl implements TransactionService {
                     StringBuilder builder = new StringBuilder("UPDATE custom.");
                     builder.append(dataTable.getName()).append(" SET transaction_id = ?,transaction_date=?, response_code = ?, " +
                             "response_message = ?," +
-                            " processed = ?,trxn_id=?, retry_flag = ?,lien_response_description=?,lien_appcode=?,account_number=?  WHERE id IN (");
+                            " processed = ?,trxn_id=?, retry_flag = ?,lien_response_description=?,lien_appcode=?,account_number=?,amount=?  WHERE id IN (");
                     for (int i = 0; i < ids.size(); i++) {
                         builder.append("?, ");
                     }
@@ -843,7 +915,10 @@ public class TransactionServiceImpl implements TransactionService {
 
                     statement.setString(10,
                             accountNUmber);
-                    int index = 11;
+
+                    statement.setBigDecimal(11,
+                            amount);
+                    int index = 12;
                     for (Long id : ids) {
                         statement.setLong(index, id);
                         ++index;
@@ -877,8 +952,7 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Async
     @Override
-    public void processTask(Task task) {
-
+    public void processTask(Task task) throws SQLException {
         if (task.getBulkPayment() == true) {
             System.out.println("i got here");
             bulkPayment(task);
@@ -894,7 +968,7 @@ public class TransactionServiceImpl implements TransactionService {
     private void bulkPayment(Task task) {
         try {
 
-            DataUpload task1 = uploadRepository.findByTask(task);
+            DataUpload task1 = uploadRepository.findByTaskAndStatus(task, GenericStatus.ACTIVE);
 
             System.out.println("**** upload id is: " + task1.getId());
             Map<String, List<Long>> unprocessed = getUnprocessedData(task.getTable(), task1.getId());
@@ -986,7 +1060,7 @@ public class TransactionServiceImpl implements TransactionService {
                                     // System.out.println(task.getCharge()+ " this is it"+ amount);
                                 }
 
-                                insertUnprocessedSingle(entry.getValue().get(1), task.getTable(), accountNumber, testVal, currentval, task.getAccount().getAccountNumber(), task.getNarration(), responseLien.getBody(), valGen, "BULK");
+                                insertUnprocessedSingle(entry.getValue().get(0), task.getTable(), accountNumber, testVal, currentval, task.getAccount().getAccountNumber(), getLastDayAndYear(), responseLien.getBody(), valGen, "BULK");
                             } else {
 
                                 lienResponse = responseLien.getBody().getResponseDescription();
@@ -996,7 +1070,7 @@ public class TransactionServiceImpl implements TransactionService {
                             }
 
                         }
-                        updateProcessedDataBulk(entry.getValue(), task.getTable(), responseEntity.getBody(), debitTrxnId, lienResponse, appCode, accountNumber);
+                        updateProcessedDataBulk(entry.getValue(), task.getTable(), responseEntity.getBody(), debitTrxnId, lienResponse, appCode, accountNumber, currentval);
 
 
                         logger.info(JsonConverter.getJson(entry.getValue() + " value is this " + responseEntity.getBody()));
@@ -1007,7 +1081,25 @@ public class TransactionServiceImpl implements TransactionService {
                     logger.error(e.getMessage());
                 }
             }
-        } catch (SQLException | InvalidDataException e) {
+            List<User> userList = userRepository.findAll();
+            String filename = saveExcelDataLog(task1, logData(task), Constants.SUCCESSFUL_TRXN);
+
+            InputStreamSource iss = new InputStreamSource() {
+                @Override
+                public InputStream getInputStream() throws IOException {
+                    // provide fresh InputStream
+                    return new FileInputStream(GenericUtil.getStoragePath() + filename);
+                }
+            };
+
+            sendMail(userList.stream().filter(user -> user.getDeleted() == false)
+                    .collect(Collectors.toList()), filename, task1, iss);
+            System.out.println(filename + " hiya");
+            task1.setSuccessfulDedbit(filename);
+            uploadRepository.saveAndFlush(task1);
+
+
+        } catch (SQLException | InvalidDataException | IOException e) {
             e.printStackTrace();
             logger.error(e.getMessage());
         }
@@ -1017,12 +1109,10 @@ public class TransactionServiceImpl implements TransactionService {
 
     private void singlePayment(Task task) {
         try {
-            Optional<DataUpload> task1 = uploadRepository.findById(task.getId());
-            if (!task1.isPresent()) {
-                throw new NoSuchElementException("Id not found");
-            }
-            System.out.println("**** upload id is: " + task1.get().getId());
-            Multimap<String, Long> unprocessed = getBulkUnprocessedData(task.getTable(), task1.get().getId());
+            DataUpload task1 = uploadRepository.findByTaskAndStatus(task, GenericStatus.ACTIVE);
+
+            System.out.println("**** upload id is: " + task1.getId());
+            Multimap<String, Long> unprocessed = getBulkUnprocessedData(task.getTable(), task1.getId());
             String testVal = null;
 
             for (Map.Entry<String, Long> entry : unprocessed.entries()) {
@@ -1100,7 +1190,7 @@ public class TransactionServiceImpl implements TransactionService {
                             if (responseLien.getBody().getStatus().equals(Constants.STATUS)) {
                                 //updateProcessedData(entry.getValue(), task.getTable(), responseEntity.getBody(), responseLien.getBody());
 
-                                insertUnprocessedSingle(entry.getValue(), task.getTable(), accountNumber, testVal, amount, task.getAccount().getAccountNumber(), task.getNarration(), responseLien.getBody(), valGen, "SINGLE");
+                                insertUnprocessedSingle(entry.getValue(), task.getTable(), accountNumber, testVal, amount, task.getAccount().getAccountNumber(), getLastDayAndYear(), responseLien.getBody(), valGen, "SINGLE");
                             } else {
                                 lienResponse = responseLien.getBody().getResponseDescription();
                                 appCode = responseLien.getBody().getAppNumber();
@@ -1108,7 +1198,7 @@ public class TransactionServiceImpl implements TransactionService {
                             }
 
                         }
-                        updateProcessedDataA(entry.getValue(), task.getTable(), responseEntity.getBody(), debitTrxnId, lienResponse, appCode, accountNumber);
+                        updateProcessedDataA(entry.getValue(), task.getTable(), responseEntity.getBody(), debitTrxnId, lienResponse, appCode, accountNumber, amount);
 
 
                         logger.info(JsonConverter.getJson(entry.getValue() + " value is this " + responseEntity.getBody()));
@@ -1119,7 +1209,26 @@ public class TransactionServiceImpl implements TransactionService {
                     logger.error(e.getMessage());
                 }
             }
-        } catch (SQLException | InvalidDataException e) {
+            String filename = saveExcelDataLog(task1, logData(task), Constants.SUCCESSFUL_TRXN);
+            List<User> userList = userRepository.findAll();
+
+
+            InputStreamSource iss = new InputStreamSource() {
+                @Override
+                public InputStream getInputStream() throws IOException {
+                    // provide fresh InputStream
+                    return new FileInputStream(GenericUtil.getStoragePath() + filename);
+                }
+            };
+
+            sendMail(userList.stream().filter(user -> user.getDeleted() == false)
+                    .collect(Collectors.toList()), filename, task1, iss);
+            System.out.println(filename + " hiya");
+            task1.setSuccessfulDedbit(filename);
+            uploadRepository.saveAndFlush(task1);
+
+
+        } catch (SQLException | InvalidDataException | IOException e) {
             e.printStackTrace();
             logger.error(e.getMessage());
         }
@@ -1202,16 +1311,15 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     public void processInsufficientBalance(DataTable dataTable) throws InvalidDataException, SQLException {
 
-
         Optional<Task> task = taskRepository.findByTable(dataTable);
-        if (!task.isPresent()) {
-            throw new NoSuchElementException("Id not found");
+        if (task.isPresent()) {
+            DataUpload dataUpload = uploadRepository.findByTaskAndStatus(task.get(), GenericStatus.ACTIVE);
+
+
+            updateInsufficientSingle(dataTable, dataUpload);
+
         }
 
-        DataUpload dataUpload = uploadRepository.findByTask(task.get());
-
-
-        updateInsufficientSingle(dataTable, dataUpload);
 
     }
 
@@ -1581,5 +1689,39 @@ public class TransactionServiceImpl implements TransactionService {
     public List<Task> getAllTasks() {
 
         return taskRepository.findAll();
+    }
+
+    public String getLastDayAndYear() {
+        Calendar calendar = Calendar.getInstance();
+        calendar.add(Calendar.MONTH, -1);
+        calendar.add(Calendar.YEAR, -1);
+        Date date = calendar.getTime();
+
+        Calendar cal = Calendar.getInstance();
+        SimpleDateFormat format = new SimpleDateFormat("MMM");
+        SimpleDateFormat format1 = new SimpleDateFormat("yyyy");
+        String dateOutput = format.format(date);
+        String yearOutput = format1.format(date);
+
+        if (new SimpleDateFormat("MMM").format(cal.getTime()).equalsIgnoreCase("January")) {
+            return smsMessage + " December," + yearOutput;
+        }
+        return smsMessage + " " + dateOutput + ", " + new SimpleDateFormat("yyyy").format(cal.getTime());
+    }
+
+    private void sendMail(List<User> userList, String filename, DataUpload dataUpload, InputStreamSource inputStreamResource) {
+        String message = null;
+        for (User user : userList) {
+            Map<String, Object> variables = GenericUtil.getUploadDetails(dataUpload, user);
+            variables.put("DateValue", getLastDayAndYear());
+            message = mailBuilder.build(Constants.SUCCESSFUL_UPLOAD, variables);
+            System.out.println("****Email sent to***** : " + user.getEmail());
+            filename = filename + ".xlsx";
+            try {
+                mailer.mailUserAsyncAttach(user.getEmail(), message, Constants.SUCCESS_SUBJECT, filename, inputStreamResource);
+            } catch (MessagingException e) {
+                e.printStackTrace();
+            }
+        }
     }
 }

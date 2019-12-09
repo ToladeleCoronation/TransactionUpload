@@ -4,6 +4,7 @@ import com.coronation.upload.domain.User;
 import com.coronation.upload.dto.MailData;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.InputStreamSource;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -38,11 +39,20 @@ public class Mailer {
     }
 
     @Async
+    public void mailUserAsyncAttach(User user,String message, String subject, InputStreamSource inputStreamResource) throws MessagingException {
+        mailUserAsync(user.getEmail(), message, subject);
+    }
+
+    @Async
     public void mailUserAsync(String to, String message, String subject) throws MessagingException {
         MailData mailData = new MailData(to, subject, message, mailSender);
         sendMailAsync(mailData);
     }
-
+    @Async
+    public void mailUserAsyncAttach(String to, String message, String subject, String fileName, InputStreamSource inputStreamResource) throws MessagingException {
+        MailData mailData = new MailData(to, subject, message, mailSender,fileName,inputStreamResource);
+        sendMailAsync(mailData);
+    }
     @Async
     public void mailUsersAsync(List<User> users, String message, String subject) {
         users.forEach(user -> {

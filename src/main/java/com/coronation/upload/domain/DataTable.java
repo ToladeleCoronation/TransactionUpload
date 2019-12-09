@@ -27,6 +27,9 @@ public class DataTable {
     @Column(unique = true)
     private String insufficientBalance;
 
+    @Pattern(regexp="^[A-Za-z].*$")
+    @Column(unique = true)
+    private String rejected;
 
     @Pattern(regexp="^[A-Za-z].*$")
     @Column(unique = true)
@@ -143,5 +146,13 @@ public class DataTable {
 
     public void setPhoneAccountHolder(String phoneAccountHolder) {
         this.phoneAccountHolder = phoneAccountHolder;
+    }
+
+    public String getRejected() {
+        return rejected;
+    }
+
+    public void setRejected(String rejected) {
+        this.rejected = rejected;
     }
 }

@@ -1,6 +1,6 @@
 package com.coronation.upload.dto;
 
-import org.springframework.core.io.InputStreamResource;
+import org.springframework.core.io.InputStreamSource;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 
@@ -16,7 +16,7 @@ public class MailData {
     private String subject;
     private String text;
     private String fileName;
-    private InputStreamResource inputStreamResource;
+    private InputStreamSource inputStreamResource;
     private JavaMailSender mailSender;
 
     public String getTo() {
@@ -51,11 +51,11 @@ public class MailData {
         this.fileName = fileName;
     }
 
-    public InputStreamResource getInputStreamResource() {
+    public InputStreamSource getInputStreamResource() {
         return inputStreamResource;
     }
 
-    public void setInputStreamResource(InputStreamResource inputStreamResource) {
+    public void setInputStreamResource(InputStreamSource inputStreamResource) {
         this.inputStreamResource = inputStreamResource;
     }
 
@@ -67,7 +67,7 @@ public class MailData {
     }
 
     public MailData(String to, String subject, String text, JavaMailSender mailSender,
-                    String fileName, InputStreamResource inputStreamResource) {
+                    String fileName, InputStreamSource inputStreamResource) {
         this.to = to;
         this.subject = subject;
         this.text = text;
@@ -110,4 +110,5 @@ public class MailData {
     public void setFrom(String from) {
         this.from = from;
     }
+
 }

@@ -83,10 +83,8 @@ public class UploadController {
                     .collect(Collectors.toList());
             for (User user : userList) {
                 Map<String, Object> variables = GenericUtil.getUploadDetails(dataUpload, user);
-                System.out.println("the values are: " + dataUpload.getSuccess() + " and " + dataUpload.getDuplicate() +
-                        " and " + dataUpload.getDuplicate() + " and " + dataUpload.getInvalid());
                 message = mailBuilder.build(Constants.UPLOAD_CREATED, variables);
-                System.out.println("****Email address is***** : " + user.getEmail());
+                System.out.println("****Email sent to***** : " + user.getEmail());
                 try {
                     mailer.mailUserAsync(user, message, Constants.UPLOAD_SUBJECT);
                 } catch (MessagingException e) {
@@ -109,7 +107,7 @@ public class UploadController {
     @PreAuthorize("hasAnyRole('OP_ADMIN')")
     @PostMapping("/{id}/approve")
     public ResponseEntity<DataUpload> approveUpload(@PathVariable("id") Long id,
-                                                    @RequestBody @Valid ApprovalDto approvalDto, BindingResult bindingResult) {
+                                                    @RequestBody @Valid ApprovalDto approvalDto, BindingResult bindingResult) throws SQLException {
         if (bindingResult.hasErrors()) {
             return ResponseEntity.badRequest().build();
         }
@@ -156,6 +154,17 @@ public class UploadController {
     @GetMapping("/download/{fileName}")
     public @ResponseBody
     byte[] downloadFile(@PathVariable("fileName") String fileName) {
+        try {
+            return GenericUtil.pathToByteArray(GenericUtil.getStoragePath() + fileName);
+        } catch (IOException ex) {
+            return new byte[0];
+        }
+    }
+
+
+    @GetMapping("/downloads/{fileName}")
+    public @ResponseBody
+    byte[] downloadReportFile(@PathVariable("fileName") String fileName) {
         try {
             return GenericUtil.pathToByteArray(GenericUtil.getStoragePath() + fileName);
         } catch (IOException ex) {

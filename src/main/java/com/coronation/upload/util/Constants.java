@@ -1,5 +1,8 @@
 package com.coronation.upload.util;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class Constants {
 
     public static final long ACCESS_TOKEN_VALIDITY_SECONDS = 5 * 60 * 60;
@@ -17,13 +20,14 @@ public class Constants {
 
     public static final String SAVED_PREFIX = "saved";
     public static final String DUPLICATE_PREFIX = "duplicate";
+    public static final String SUCCESSFUL_TRXN = "successfulUpload";
     public static final String UNMATCHED_PREFIX = "unmatched";
     public static final String INVALID_PREFIX = "invalid";
     public static final String EXCEPTIONS_PREFIX = "exceptions";
-    public static final String SMS_CHARGE_LIEN="Sms charge";
-    public static final String INSUFFICIENT_FUND="Insufficient available balance";
-    public static final String TRANX_LIEN="LIEN";
-    public static final String STATUS="SUCCESS";
+    public static final String SMS_CHARGE_LIEN = "Sms charge";
+    public static final String INSUFFICIENT_FUND = "Insufficient available balance";
+    public static final String TRANX_LIEN = "LIEN";
+    public static final String STATUS = "SUCCESS";
 
     public static final String STAFF_EMAIL_SUFFIX = "coronationmb.com";
     public static final String DEFAULT_BANK_NAME = "Coronation Merchant Bank";
@@ -37,6 +41,20 @@ public class Constants {
 
     public static final String STAFF_ENTRUST_GROUP = "Coronation Group";
     public static final String UPLOAD_CREATED = "uploadCreated";
+    public static final String SUCCESSFUL_UPLOAD = "successfulUpload";
     public static final String UPLOAD_SUBJECT = "SMS UPLOAD NOTIFICATION";
+    public static final String SUCCESS_SUBJECT = "SMS DEBIT NOTIFICATION";
+    public static final String SUCCESS_FILENAME = "debitCredit.xlsx";
+
+    public static List<String> logHeader() {
+        List<String> logHead = new ArrayList<>();
+        logHead.add("Account Number");
+        logHead.add("Phone Number");
+        logHead.add("Count");
+        logHead.add("Amount");
+        logHead.add("Status");
+
+        return logHead;
+    }
 
 }

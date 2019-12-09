@@ -32,8 +32,8 @@ public class ScheduledTasks {
         processDueInsufficientBalance();
     }
 
-   //@Scheduled(fixedRate = 60000)
-    @Scheduled(cron = "0 0 12 * * ?")
+
+    @Scheduled( cron="0 0 0 * * ?")
     public void scheduleInsuuficientFundTask() {
         getAllTask();
         logger.info("Data Transfer Successful at =====>>>> "+ LocalDate.now());
@@ -45,7 +45,11 @@ public class ScheduledTasks {
         logger.info(JsonConverter.getJson(dueTasks));
         dueTasks.forEach(task -> {
             if (task.getAccount().getStatus().equals(GenericStatus.ACTIVE)) {
-                transactionService.processTask(task);
+                try {
+                    transactionService.processTask(task);
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
 
             }
         });

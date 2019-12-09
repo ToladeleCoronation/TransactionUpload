@@ -30,7 +30,7 @@ import java.util.Set;
 public interface TransactionService {
     DataUpload uploadFile(MultipartFile[] files, Task task) throws InvalidDataException, IOException;
 
-    DataUpload rejectFile(DataUpload dataUpload);
+    DataUpload rejectFile(DataUpload dataUpload) throws SQLException;
 
     DataUpload approveFile(DataUpload dataUpload) throws IOException, InvalidFormatException, InvalidDataException, SQLException;
 
@@ -57,14 +57,14 @@ public interface TransactionService {
 
     void updateProcessedData(Long ids, DataTable dataTable, TransferResponses response,LienResponse responses) throws SQLException;
 
-    void updateProcessedDataA(Long ids, DataTable dataTable,TransferResponses response,String val,String lienResponse,String appcode,String accountNumber) throws SQLException;
+    void updateProcessedDataA(Long ids, DataTable dataTable,TransferResponses response,String val,String lienResponse,String appcode,String accountNumber,BigDecimal amount) throws SQLException;
 
     void insertUnprocessedSingle(Long id, DataTable table, String accountNumber, String phoneNumber, BigDecimal amount,String creditAccount,String narration,LienResponse lienResponse,String trxnId,String debitType) throws SQLException;
 
     @Transactional(propagation = Propagation.REQUIRED)
     TransferResponses transfer(TransferRequestt transferRequest) throws ApiException;
 
-    void processTask(Task task);
+    void processTask(Task task) throws SQLException;
 
     String correctAccountNumber(Multimap<String, String> map, String identifier);
 

@@ -9,5 +9,5 @@ import org.springframework.data.querydsl.QuerydslPredicateExecutor;
  * Created by Toyin on 7/30/19.
  */
 public interface UploadRepository extends JpaRepository<DataUpload, Long>, QuerydslPredicateExecutor<DataUpload> {
-    DataUpload findByTask(Task task);
+    DataUpload findByTaskAndStatus(Task task,Enum status);
 }

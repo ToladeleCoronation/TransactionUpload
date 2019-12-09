@@ -42,9 +42,11 @@ public class TableServiceImpl implements TableService {
         dataTable.setColumns(columns);
         dataTable = saveTable(dataTable);
         String createScript = getCreateScript(dataTable);
+        String createScriptRejected = getCreateScriptReject(dataTable);
         String createScriptInsufficientBalance = getCreateScriptInsufficient(dataTable);
         String createAccountPhone=getCreateScriptAccountPhone(dataTable);
         createTable(createScript);
+        createTable(createScriptRejected);
         createTableInsufficient(createScriptInsufficientBalance);
         createPhoneAccount(createAccountPhone);
 
@@ -84,6 +86,7 @@ public class TableServiceImpl implements TableService {
      DataTable saveTable(DataTable dataTable) {
         dataTable.setInsufficientBalance(dataTable.getName()+"_insufficientBalance");
         dataTable.setPhoneAccountHolder(dataTable.getName()+"_PhoneAccountHolder");
+        dataTable.setRejected(dataTable.getName()+"_rejected");
         return tableRepository.saveAndFlush(dataTable);
     }
 
@@ -123,6 +126,29 @@ public class TableServiceImpl implements TableService {
             }
             if (c.getUnique() || c.getReconciliation()) {
                 builder.append(" UNIQUE");
+            }
+            if (c.getReconciliation() || c.getIdentifier() || c.getAmountField()) {
+                builder.append(" NOT NULL");
+            }
+            builder.append(", ");
+        });
+        builder.append("upload_id bigint(20) NOT NULL, approved bit(1) NOT NULL DEFAULT 0, " +
+                "processed bit(1) NOT NULL DEFAULT 0,trxn_id varchar(50), transaction_id varchar(50),account_number varchar(15),debit_type bit(1) NOT NULL DEFAULT 0,amount DECIMAL(13,0),transaction_date varchar(50), retry_flag varchar(2), response_code varchar(10), " +
+                "response_message varchar(255),lien_response_description varchar(255),lien_appcode varchar(200),lien_date varchar(50), " +
+                "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`id`) ");
+        return builder.toString();
+    }
+
+
+    private String getCreateColumnStringRejected(List<DataColumn> columns) {
+        StringBuilder builder = new StringBuilder("id bigint(20) NOT NULL AUTO_INCREMENT, ");
+        columns.forEach(c -> {
+            builder.append(c.getName()).append(" ");
+            if (c.getDataType().equals(DataType.VARCHAR) && c.getDataSize() != null && c.getDataSize() > 0) {
+                builder.append(c.getDataType().getValue().
+                        replace("255", c.getDataSize().toString()));
+            } else {
+                builder.append(c.getDataType().getValue());
             }
             if (c.getReconciliation() || c.getIdentifier() || c.getAmountField()) {
                 builder.append(" NOT NULL");
@@ -206,7 +232,7 @@ public class TableServiceImpl implements TableService {
         StringBuilder builder = new StringBuilder("id bigint(20) NOT NULL AUTO_INCREMENT, ");
 
         builder.append("upload_id bigint(20) NOT NULL, " +
-                "processed bit(1) NOT NULL DEFAULT 0,phone_number varchar(15),account_number varchar(15),credit_account varchar(20), narration varchar(50),amount DECIMAL(13,0), " +
+                "processed bit(1) NOT NULL DEFAULT 0,phone_number varchar(15),account_number varchar(15),credit_account varchar(20), narration varchar(100),amount DECIMAL(13,0), " +
                 "appnumber varchar(30),trxn_id varchar(30),debit_type varchar(15), mode varchar(15),msgdate varchar(25),status_message varchar(50),response_description varchar(50),response_code varchar(20),response_message varchar(50),transaction_date varchar(30),tranid varchar(10),trxnfer_id varchar(50)," +
                 "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`id`) ");
         return builder.toString();
@@ -217,6 +243,14 @@ public class TableServiceImpl implements TableService {
 
         builder.append("phone_number varchar(15),account_number varchar(15)," +
                 "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`id`) ");
+        return builder.toString();
+    }
+
+    @Override
+    public String getCreateScriptReject(DataTable dataTable) {
+        StringBuilder builder = new StringBuilder("create table custom.");
+        builder.append(dataTable.getRejected()).append("( ").append(getCreateColumnStringRejected(dataTable.getColumns())).
+                append(" )");
         return builder.toString();
     }
 }

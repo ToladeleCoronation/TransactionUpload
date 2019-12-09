@@ -39,6 +39,10 @@ public class DataUpload {
     private String invalidFile;
     private String exceptionsFile;
 
+    private String successfulDedbit;
+    private String failedDebit;
+    private String accountNotPresent;
+
     @NotNull
     private String uploadFile;
 
@@ -196,6 +200,30 @@ public class DataUpload {
 
     public void setModifiedAt(LocalDateTime modifiedAt) {
         this.modifiedAt = modifiedAt;
+    }
+
+    public String getSuccessfulDedbit() {
+        return successfulDedbit;
+    }
+
+    public void setSuccessfulDedbit(String successfulDedbit) {
+        this.successfulDedbit = successfulDedbit;
+    }
+
+    public String getFailedDebit() {
+        return failedDebit;
+    }
+
+    public void setFailedDebit(String failedDebit) {
+        this.failedDebit = failedDebit;
+    }
+
+    public String getAccountNotPresent() {
+        return accountNotPresent;
+    }
+
+    public void setAccountNotPresent(String accountNotPresent) {
+        this.accountNotPresent = accountNotPresent;
     }
 
     @Override

@@ -37,6 +37,8 @@ public class GenericUtil {
     private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
     private static final DateTimeFormatter longFormatter = DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL);
 
+
+
     public static boolean dateBetween(LocalDateTime dateToCompare, LocalDateTime startDate, LocalDateTime endDate) {
         if ((dateToCompare.isAfter(startDate) && dateToCompare.isBefore(endDate))
                 || dateToCompare.equals(startDate) || dateToCompare.equals(endDate)) {
@@ -56,12 +58,13 @@ public class GenericUtil {
         variables.put("fileName", dataUpload.getUploadFile());
         variables.put("reconFile", dataUpload.getUploadFile());
         variables.put("successRecord", dataUpload.getSuccess());
-        variables.put("invalidRecords",dataUpload.getInvalid());
+        variables.put("invalidRecords", dataUpload.getInvalid());
         variables.put("unmatchedRecord", dataUpload.getUnmatched());
         variables.put("duplicate", dataUpload.getDuplicate());
         variables.put("exception", dataUpload.getExceptions());
         return variables;
     }
+
     public static String localDateTimeToString(LocalDateTime localDateTime) {
         return formatter.format(localDateTime);
     }
@@ -102,6 +105,7 @@ public class GenericUtil {
         calendar.set(Calendar.DAY_OF_YEAR, 1);
         return LocalDateTime.ofInstant(calendar.toInstant(), ZoneId.systemDefault()).truncatedTo(ChronoUnit.DAYS);
     }
+
 
     public static String getClientIp(HttpServletRequest request) {
         String remoteAddr = "";
@@ -154,7 +158,7 @@ public class GenericUtil {
         }
         from = GenericUtil.truncateTime(from);
         to = GenericUtil.ceilTime(to);
-        return new LocalDateTime[] {from, to};
+        return new LocalDateTime[]{from, to};
     }
 
     public static User getUserFromRequest(HttpServletRequest req, UserService userService) {
@@ -212,7 +216,7 @@ public class GenericUtil {
 
     public static String appendDateToFileName(String fileName) {
         fileName = fileName.substring(0, fileName.lastIndexOf(".")) +
-        System.currentTimeMillis() + fileName.substring(fileName.lastIndexOf("."));
+                System.currentTimeMillis() + fileName.substring(fileName.lastIndexOf("."));
         return fileName;
     }
 

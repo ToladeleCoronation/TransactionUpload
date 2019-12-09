@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import java.math.BigDecimal;
+import java.sql.SQLException;
 import java.util.List;
 
 /**
@@ -126,7 +127,7 @@ public class TaskController {
 
     @PreAuthorize("hasAnyRole('IT_ADMIN')")
     @PostMapping("/{id}/process")
-    public ResponseEntity processTask(@PathVariable("id") Long id) {
+    public ResponseEntity processTask(@PathVariable("id") Long id) throws SQLException {
         Task task = taskService.findById(id);
         if (task == null) {
             return ResponseEntity.notFound().build();

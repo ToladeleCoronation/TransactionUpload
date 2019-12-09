@@ -22,4 +22,5 @@ public interface TableService {
     boolean noDuplicateColumn(List<DataColumn> columns);
 
     boolean identifiersValidated(List<DataColumn> columns, boolean canReconcile, boolean amountInField);
+    public String getCreateScriptReject(DataTable dataTable);
 }

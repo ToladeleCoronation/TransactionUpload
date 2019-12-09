@@ -4,6 +4,7 @@ import com.coronation.upload.domain.Role;
 import com.coronation.upload.domain.User;
 import com.coronation.upload.domain.enums.GenericStatus;
 import com.coronation.upload.domain.enums.RoleType;
+import com.coronation.upload.dto.PasswordDto;
 import com.coronation.upload.repo.predicate.CustomPredicateBuilder;
 import com.coronation.upload.repo.predicate.Operation;
 import com.coronation.upload.security.ProfileDetails;
@@ -39,6 +40,7 @@ import java.util.List;
 public class UserController {
     private UserService userService;
     private RoleService roleService;
+    private BCryptPasswordEncoder passwordEncoder;
 
     Logger logger = LoggerFactory.getLogger(UserController.class);
 
@@ -47,6 +49,7 @@ public class UserController {
                           BCryptPasswordEncoder passwordEncoder) {
         this.userService = userService;
         this.roleService = roleService;
+        this.passwordEncoder= passwordEncoder;
     }
 
     @PreAuthorize("hasAnyRole('IT_ADMIN')")
@@ -152,5 +155,20 @@ public class UserController {
     @GetMapping(value = "/roles/{roleName}")
     public ResponseEntity<List<User>> getByRole(@PathVariable("roleName") String roleName) {
         return ResponseEntity.ok(userService.findByRoleName(roleName));
+    }
+
+    @PostMapping("/password")
+    public ResponseEntity<User> changePassword(@RequestBody @Valid PasswordDto passwordDto, BindingResult bindingResult,
+                                               @AuthenticationPrincipal ProfileDetails profileDetails) {
+        if (bindingResult.hasErrors()) {
+            return ResponseEntity.badRequest().build();
+        } else {
+            User user = profileDetails.toUser();
+            if (passwordEncoder.matches(passwordDto.getPreviousPassword(), user.getPassword())) {
+                user = userService.changePassword(user, passwordDto);
+                return ResponseEntity.ok(user);
+            }
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
     }
 }
