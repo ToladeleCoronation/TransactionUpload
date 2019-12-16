@@ -139,8 +139,20 @@ public class ExcelSaver {
             cell3.setCellStyle(style);
 
             Cell cell4 = row.createCell(4);
-            cell4.setCellValue(data.getStatus());
+            cell4.setCellValue(data.getNarration());
             cell4.setCellStyle(style);
+
+            Cell cell5 = row.createCell(5);
+            cell5.setCellValue(data.getResponse_code());
+            cell5.setCellStyle(style);
+
+            Cell cell6 = row.createCell(6);
+            cell6.setCellValue(data.getStatus());
+            cell6.setCellStyle(style);
+
+            Cell cell7 = row.createCell(7);
+            cell7.setCellValue(data.getDateDebitted());
+            cell7.setCellStyle(style);
 
             ++index;
         }

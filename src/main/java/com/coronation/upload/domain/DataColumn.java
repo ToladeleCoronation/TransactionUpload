@@ -32,6 +32,9 @@ public class DataColumn {
     @Column(nullable = false)
     private Boolean identifier = Boolean.FALSE;
 
+    @Column(nullable = false)
+    private Boolean narration = Boolean.FALSE;
+
     @Column(name = "unique_column", nullable = false)
     private Boolean unique = Boolean.FALSE;
 
@@ -162,5 +165,13 @@ public class DataColumn {
     @Override
     public int hashCode() {
         return id != null ? id.hashCode() : 0;
+    }
+
+    public Boolean getNarration() {
+        return narration;
+    }
+
+    public void setNarration(Boolean narration) {
+        this.narration = narration;
     }
 }

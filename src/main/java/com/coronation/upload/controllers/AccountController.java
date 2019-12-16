@@ -30,7 +30,7 @@ public class AccountController {
         this.accountService = accountService;
     }
 
-    @PreAuthorize("hasRole('IT_ADMIN')")
+    @PreAuthorize("hasRole('INITIALIZER')")
     @PostMapping("/number/{accountNumber}")
     public ResponseEntity<Account> create(@PathVariable("accountNumber") String accountNumber) {
         if (accountService.findByAccountNumber(accountNumber) != null) {
@@ -55,7 +55,7 @@ public class AccountController {
     }
 
 
-    @PreAuthorize("hasRole('OP_ADMIN')")
+    @PreAuthorize("hasRole('AUTHORIZER')")
     @PostMapping("/{id}/approve")
     public ResponseEntity<Account> approve(@PathVariable("id") Long id,
                                            @RequestBody @Valid ApprovalDto approvalDto, BindingResult bindingResult) {

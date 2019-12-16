@@ -70,7 +70,6 @@ public class TaskServiceImpl implements TaskService {
         previous.setFetchColumn(task.getFetchColumn());
         previous.setAccountColumn(task.getAccountColumn());
         previous.setName(task.getName());
-        previous.setNarration(task.getNarration());
         previous.setReconcile(task.getReconcile());
         previous.setDescription(task.getDescription());
         previous.setAmountInData(task.getAmountInData());

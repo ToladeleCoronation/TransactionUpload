@@ -41,7 +41,7 @@ public class TaskController {
         this.transactionService = transactionService;
     }
 
-    @PreAuthorize("hasAnyRole('IT_ADMIN')")
+    @PreAuthorize("hasAnyRole('INITIALIZER')")
     @PostMapping("/schedules/{scheduleId}/connections/{connectionId}/tables/{tableId}/accounts/{accountId}")
     public ResponseEntity<Task> create(@RequestBody @Valid Task task, BindingResult bindingResult,
            @PathVariable("scheduleId") Long scheduleId, @PathVariable("connectionId") Long connectionId,
@@ -79,7 +79,7 @@ public class TaskController {
         return ResponseEntity.ok(taskService.saveTask(task, connection, schedule, table, account));
     }
 
-    @PreAuthorize("hasAnyRole('IT_ADMIN')")
+    @PreAuthorize("hasAnyRole('INITIALIZER')")
     @PostMapping("/{id}/schedules/{scheduleId}/connections/{connectionId}/tables/{tableId}/accounts/{accountId}")
     public ResponseEntity<Task> edit(@PathVariable("id") Long id,
              @PathVariable("scheduleId") Long scheduleId, @PathVariable("connectionId") Long connectionId,
@@ -125,7 +125,7 @@ public class TaskController {
         return ResponseEntity.ok(taskService.findById(id));
     }
 
-    @PreAuthorize("hasAnyRole('IT_ADMIN')")
+    @PreAuthorize("hasAnyRole('INITIALIZER')")
     @PostMapping("/{id}/process")
     public ResponseEntity processTask(@PathVariable("id") Long id) throws SQLException {
         Task task = taskService.findById(id);

@@ -61,13 +61,13 @@ public class UploadController {
     }
 
 
-    @PreAuthorize("hasAnyRole('IT_ADMIN')")
+    @PreAuthorize("hasAnyRole('INITIALIZER')")
     @PostMapping("/tasks/{taskId}/files")
     public ResponseEntity<DataUpload> upload(@PathVariable("taskId") Long taskId,
                                              @RequestParam("file") MultipartFile[] files) {
         Task task = taskService.findById(taskId);
         List<User> userList = new ArrayList<>();
-        userList = userService.findByRoleName(RoleType.OP_ADMIN.toString());
+        userList = userService.findByRoleName(RoleType.AUTHORIZER.toString());
         if (task == null) {
             ResponseEntity.notFound().build();
         } else if (!task.getAccount().getStatus().equals(GenericStatus.ACTIVE)) {
@@ -104,7 +104,7 @@ public class UploadController {
         }
     }
 
-    @PreAuthorize("hasAnyRole('OP_ADMIN')")
+    @PreAuthorize("hasAnyRole('AUTHORIZER')")
     @PostMapping("/{id}/approve")
     public ResponseEntity<DataUpload> approveUpload(@PathVariable("id") Long id,
                                                     @RequestBody @Valid ApprovalDto approvalDto, BindingResult bindingResult) throws SQLException {

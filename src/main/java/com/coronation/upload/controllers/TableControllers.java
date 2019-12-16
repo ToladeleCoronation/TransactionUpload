@@ -31,7 +31,7 @@ public class TableControllers {
         this.tableService = tableService;
     }
 
-    @PreAuthorize("hasAnyRole('IT_ADMIN')")
+    @PreAuthorize("hasAnyRole('INITIALIZER')")
     @PostMapping
     public ResponseEntity<DataTable> create(@RequestBody @Valid DataTables dataTable1, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {

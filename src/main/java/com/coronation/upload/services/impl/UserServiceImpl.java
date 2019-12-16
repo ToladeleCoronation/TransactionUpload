@@ -2,6 +2,7 @@ package com.coronation.upload.services.impl;
 
 import com.coronation.upload.domain.Role;
 import com.coronation.upload.domain.User;
+import com.coronation.upload.domain.enums.GenericStatus;
 import com.coronation.upload.dto.PasswordDto;
 import com.coronation.upload.repo.UserRepository;
 import com.coronation.upload.services.UserService;
@@ -66,6 +67,24 @@ public class UserServiceImpl implements UserService {
 		prev.setLastName(current.getLastName());
 		prev.setPhoneNumber(current.getPhoneNumber());
 		prev.setEmail(current.getEmail());
+		prev.setModifiedAt(LocalDateTime.now());
+		return userRepository.saveAndFlush(prev);
+	}
+
+	@Transactional(propagation = Propagation.REQUIRED)
+	@Override
+	public User disable(User prev) {
+		if(prev.getDeleted())
+		{
+			prev.setStatus(GenericStatus.ACTIVE);
+			prev.setDeleted(false);
+		}
+		else
+		{
+			prev.setStatus(GenericStatus.INACTIVE);
+			prev.setDeleted(true);
+		}
+
 		prev.setModifiedAt(LocalDateTime.now());
 		return userRepository.saveAndFlush(prev);
 	}

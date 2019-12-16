@@ -1,6 +1,7 @@
 package com.coronation.upload.controllers;
 
 import com.coronation.upload.domain.AccountReport;
+import com.coronation.upload.domain.AccountReportInsufficient;
 import com.coronation.upload.domain.DataTable;
 import com.coronation.upload.services.AccountReportService;
 import com.coronation.upload.services.TableService;
@@ -45,4 +46,13 @@ public class AccountReportController {
     }
 
 
+    @GetMapping(value = "/{accountId}/{insufficientId}")
+    public ResponseEntity<List<AccountReportInsufficient>> getByRole(@PathVariable("accountId") String accountId,
+                                                                     @PathVariable("insufficientId") Long insufficientId) throws SQLException {
+        if (accountId == null || insufficientId==null) {
+            return ResponseEntity.notFound().build();
+        }
+        DataTable dataTable = tableService.findById(insufficientId);
+        return  ResponseEntity.ok(accountReportService.insufficientBalance(accountId,dataTable));
+    }
 }

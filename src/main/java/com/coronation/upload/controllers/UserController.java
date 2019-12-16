@@ -52,7 +52,7 @@ public class UserController {
         this.passwordEncoder= passwordEncoder;
     }
 
-    @PreAuthorize("hasAnyRole('IT_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @PostMapping("/roles/{roleName}")
     public ResponseEntity<User> create(@PathVariable("roleName") RoleType roleName,
                                        @RequestBody @Valid User user, BindingResult bindingResult, @AuthenticationPrincipal ProfileDetails profileDetails) {
@@ -73,7 +73,7 @@ public class UserController {
         }
     }
 
-    @PreAuthorize("hasAnyRole('IT_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @PutMapping("/{id}")
     public ResponseEntity<User> edit(@PathVariable("id") Long id,
         @RequestBody @Valid User newData, BindingResult bindingResult, @AuthenticationPrincipal ProfileDetails profileDetails) {
@@ -91,7 +91,22 @@ public class UserController {
         }
     }
 
-    @PreAuthorize("hasAnyRole('IT_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN')")
+    @PostMapping("/disable/{id}")
+    public ResponseEntity<User> disableUser(@PathVariable("id") Long id, @AuthenticationPrincipal ProfileDetails profileDetails) {
+        User user = userService.findById(id);
+      if (user == null) {
+            return ResponseEntity.notFound().build();
+        }
+        try {
+            user = userService.disable(user);
+            return ResponseEntity.ok(user);
+        } catch (DataIntegrityViolationException dve) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).build();
+        }
+    }
+
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<User> delete(@PathVariable("id") Long id) {
         User user = userService.findById(id);
@@ -110,7 +125,7 @@ public class UserController {
         return ResponseEntity.ok(user);
     }
 
-    @PreAuthorize("hasAnyRole('IT_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @PutMapping("/{id}/roles/{roleId}")
     public ResponseEntity<User> assignRole(@PathVariable("id") Long id, @PathVariable("roleId") Long roleId) {
         User user = userService.findById(id);

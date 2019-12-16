@@ -27,7 +27,7 @@ public class ScheduleController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('IT_ADMIN')")
+    @PreAuthorize("hasAnyRole('INITIALIZER')")
     public ResponseEntity<Schedule> createJob(@RequestBody @Valid Schedule schedule, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
             return ResponseEntity.badRequest().build();
@@ -40,7 +40,7 @@ public class ScheduleController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('IT_ADMIN')")
+    @PreAuthorize("hasAnyRole('INITIALIZER')")
     public ResponseEntity<Schedule> editJob(@PathVariable("id") Long id,
                                             @RequestBody @Valid Schedule schedule, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {

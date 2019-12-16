@@ -1,6 +1,7 @@
 package com.coronation.upload.services;
 
 import com.coronation.upload.domain.AccountReport;
+import com.coronation.upload.domain.AccountReportInsufficient;
 import com.coronation.upload.domain.DataTable;
 
 import java.sql.SQLException;
@@ -11,4 +12,5 @@ import java.util.List;
  */
 public interface AccountReportService {
     List<AccountReport> getListOfAccountReport(DataTable dataTable, String phoneNumber, String accountNumber) throws SQLException;
+    List<AccountReportInsufficient> insufficientBalance(String upload_id, DataTable tableId) throws SQLException;
 }

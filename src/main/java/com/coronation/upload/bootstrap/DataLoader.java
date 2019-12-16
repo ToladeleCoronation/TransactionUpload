@@ -55,7 +55,7 @@ public class DataLoader implements ApplicationListener<ContextRefreshedEvent> {
 			user.setEmail("hold@gmail.com");
 			user.setPassword(encoder.encode("password"));
 			user.setStatus(GenericStatus.ACTIVE);
-			Role role = roleRepository.findByName(RoleType.OP_ADMIN);
+			Role role = roleRepository.findByName(RoleType.AUTHORIZER);
 			user.setRole(role);
 			User user1 = new User();
 			user1.setFirstName("Gold");
@@ -64,9 +64,19 @@ public class DataLoader implements ApplicationListener<ContextRefreshedEvent> {
 			user1.setEmail("gold.o@ng.lopworks.com");
 			user1.setPassword(encoder.encode("password"));
 			user1.setStatus(GenericStatus.ACTIVE);
-			Role role1 = roleRepository.findByName(RoleType.IT_ADMIN);
+			Role role1 = roleRepository.findByName(RoleType.INITIALIZER);
 			user1.setRole(role1);
+			User user2 = new User();
+			user2.setFirstName("Gold");
+			user2.setLastName("Admin");
+			user2.setPhoneNumber("08115897745");
+			user2.setEmail("goldtivere@ng.lopworks.com");
+			user2.setPassword(encoder.encode("password"));
+			user2.setStatus(GenericStatus.ACTIVE);
+			Role role2 = roleRepository.findByName(RoleType.ADMIN);
+			user2.setRole(role2);
 			saveUsers.add(user);
+			saveUsers.add(user2);
 			saveUsers.add(user1);
 			saveUsers= userRepository.saveAll(saveUsers);
 			for(User u: saveUsers) {

@@ -52,14 +52,11 @@ public class Task {
 
     private BigDecimal charge;
 
-    @NotNull
-    private String narration;
-
     @Column(nullable = false)
     private Boolean reconcile = Boolean.FALSE;
 
     @Column(nullable = false)
-    private Boolean bulkPayment = Boolean.FALSE;
+    private Boolean bulkPayment = Boolean.TRUE;
 
     @Column(name="created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
@@ -169,14 +166,6 @@ public class Task {
 
     public void setAccount(Account account) {
         this.account = account;
-    }
-
-    public String getNarration() {
-        return narration;
-    }
-
-    public void setNarration(String narration) {
-        this.narration = narration;
     }
 
     public Boolean getReconcile() {

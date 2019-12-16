@@ -6,7 +6,10 @@ public class LogExporter {
     private String count;
     private String amount;
     private String status;
+    private String response_code;
     private String value;
+    private String narration;
+    private String dateDebitted;
 
     public String getAccountNumber() {
         return accountNumber;
@@ -54,5 +57,29 @@ public class LogExporter {
 
     public void setValue(String value) {
         this.value = value;
+    }
+
+    public String getResponse_code() {
+        return response_code;
+    }
+
+    public void setResponse_code(String response_code) {
+        this.response_code = response_code;
+    }
+
+    public String getNarration() {
+        return narration;
+    }
+
+    public void setNarration(String narration) {
+        this.narration = narration;
+    }
+
+    public String getDateDebitted() {
+        return dateDebitted;
+    }
+
+    public void setDateDebitted(String dateDebitted) {
+        this.dateDebitted = dateDebitted;
     }
 }

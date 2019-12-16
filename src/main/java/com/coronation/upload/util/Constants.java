@@ -42,8 +42,8 @@ public class Constants {
     public static final String STAFF_ENTRUST_GROUP = "Coronation Group";
     public static final String UPLOAD_CREATED = "uploadCreated";
     public static final String SUCCESSFUL_UPLOAD = "successfulUpload";
-    public static final String UPLOAD_SUBJECT = "SMS UPLOAD NOTIFICATION";
-    public static final String SUCCESS_SUBJECT = "SMS DEBIT NOTIFICATION";
+    public static final String UPLOAD_SUBJECT = "SMS Portal - APPROVAL Request";
+    public static String SUCCESS_SUBJECT = "SMS CHARGES DEBITED ON";
     public static final String SUCCESS_FILENAME = "debitCredit.xlsx";
 
     public static List<String> logHeader() {
@@ -51,8 +51,11 @@ public class Constants {
         logHead.add("Account Number");
         logHead.add("Phone Number");
         logHead.add("Count");
-        logHead.add("Amount");
+        logHead.add("Amount (₦)");
+        logHead.add("Narration");
         logHead.add("Status");
+        logHead.add("Remark");
+        logHead.add("Date Debited");
 
         return logHead;
     }

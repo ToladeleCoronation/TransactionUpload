@@ -32,6 +32,10 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.Month;
+
 import javax.mail.MessagingException;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -298,12 +302,19 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
 
-    private List<LogExporter> logData(Task task) throws SQLException{
+    private List<LogExporter> logData(Task task, DataUpload dataUpload) throws SQLException {
+        System.out.println("hello sir " + dataUpload.getId());
         List<LogExporter> logExporter = new ArrayList<>();
         String identifier = null;
+        String narration=null;
         for (DataColumn column : task.getTable().getColumns()) {
             if (column.getIdentifier()) {
                 identifier = column.getName();
+            }
+
+            if(column.getNarration())
+            {
+                narration=column.getName();
             }
         }
         PreparedStatement statement = null;
@@ -312,7 +323,7 @@ public class TransactionServiceImpl implements TransactionService {
 
         StringBuilder builder = new StringBuilder("select *,").append("count(" + identifier + ") as count from ").
                 append(" custom.").
-                append(task.getTable().getName()).append(" group by " + identifier + "");
+                append(task.getTable().getName()).append(" where upload_id=" + dataUpload.getId() + " group by " + identifier + "");
         System.out.println(builder.toString() + "  aggaaaainn");
 
         try {
@@ -323,13 +334,18 @@ public class TransactionServiceImpl implements TransactionService {
                 LogExporter logExporter1 = new LogExporter();
                 if (resultSet.getString("account_number") != null) {
                     logExporter1.setAccountNumber(resultSet.getString("account_number"));
+                    logExporter1.setStatus(resultSet.getString("response_message"));
+                    logExporter1.setResponse_code(resultSet.getString("response_code"));
                 } else {
-                    logExporter1.setAccountNumber("Account not found");
+                    logExporter1.setAccountNumber("ACCOUNT NOT FOUND");
+                    logExporter1.setStatus("ACCOUNT NOT FOUND");
+                    logExporter1.setResponse_code("NOT PROCESSED");
                 }
                 logExporter1.setCount(String.valueOf(resultSet.getInt("count")));
                 logExporter1.setPhoneNumber(resultSet.getString(identifier));
                 logExporter1.setAmount(String.valueOf(resultSet.getBigDecimal("amount")));
-                logExporter1.setStatus(resultSet.getString("response_message"));
+                logExporter1.setNarration(resultSet.getString(narration));
+                logExporter1.setDateDebitted(resultSet.getString("transaction_date"));
                 logExporter.add(logExporter1);
             }
         } finally {
@@ -549,7 +565,7 @@ public class TransactionServiceImpl implements TransactionService {
         }
         credit.setCurrencyCode(Constants.accountCode);
         rec.setTrnAmt(credit);
-        rec.setTrnParticulars(getLastDayAndYear());
+        rec.setTrnParticulars(getNarration(task.getTable(),ids.get(0)));
         //request.setUniqueIdentifier(generateTransactionId());
 
         reequest.add(rec);
@@ -559,7 +575,7 @@ public class TransactionServiceImpl implements TransactionService {
         recDeb.setSerialNum(Constants.serialNum2);
         debit1.setCurrencyCode(Constants.accountCode);
         recDeb.setTrnAmt(debit1);
-        recDeb.setTrnParticulars(getLastDayAndYear());
+        recDeb.setTrnParticulars(getNarration(task.getTable(),ids.get(0)));
 
         reequest.add(recDeb);
         trxnRequest.setRecs(reequest);
@@ -605,7 +621,7 @@ public class TransactionServiceImpl implements TransactionService {
         }
         credit.setCurrencyCode(Constants.accountCode);
         rec.setTrnAmt(credit);
-        rec.setTrnParticulars(getLastDayAndYear());
+        rec.setTrnParticulars(getNarration(task.getTable(),ids));
         //request.setUniqueIdentifier(generateTransactionId());
 
         reequest.add(rec);
@@ -616,7 +632,7 @@ public class TransactionServiceImpl implements TransactionService {
         debit1.setCurrencyCode(Constants.accountCode);
 
         recDeb.setTrnAmt(debit1);
-        recDeb.setTrnParticulars(getLastDayAndYear());
+        recDeb.setTrnParticulars(getNarration(task.getTable(),ids));
 
         reequest.add(recDeb);
         trxnRequest.setRecs(reequest);
@@ -1062,7 +1078,7 @@ public class TransactionServiceImpl implements TransactionService {
                             logger.info("My value==>>>>: " + JsonConverter.getJson(responseLien));
                             if (responseLien.getBody().getStatus().equals(Constants.STATUS)) {
                                 //updateProcessedData(entry.getValue(), task.getTable(), responseEntity.getBody(), responseLien.getBody());
-                                insertUnprocessedSingle(entry.getValue().get(0), task.getTable(), accountNumber, testVal, currentval, task.getAccount().getAccountNumber(), getLastDayAndYear(), responseLien.getBody(), valGen, "BULK");
+                                insertUnprocessedSingle(entry.getValue().get(0), task.getTable(), accountNumber, testVal, currentval, task.getAccount().getAccountNumber(), getNarration(task.getTable(),entry.getValue().get(0)), responseLien.getBody(), valGen, "BULK");
                             } else {
 
                                 lienResponse = responseLien.getBody().getResponseDescription();
@@ -1084,7 +1100,7 @@ public class TransactionServiceImpl implements TransactionService {
                 }
             }
             List<User> userList = userRepository.findAll();
-            String filename = saveExcelDataLog(task1, logData(task), Constants.SUCCESSFUL_TRXN);
+            String filename = saveExcelDataLog(task1, logData(task, task1), Constants.SUCCESSFUL_TRXN);
 
             InputStreamSource iss = new InputStreamSource() {
                 @Override
@@ -1107,6 +1123,8 @@ public class TransactionServiceImpl implements TransactionService {
         }
 
     }
+
+
 
 
     private void singlePayment(Task task) {
@@ -1192,7 +1210,7 @@ public class TransactionServiceImpl implements TransactionService {
                             if (responseLien.getBody().getStatus().equals(Constants.STATUS)) {
                                 //updateProcessedData(entry.getValue(), task.getTable(), responseEntity.getBody(), responseLien.getBody());
 
-                                insertUnprocessedSingle(entry.getValue(), task.getTable(), accountNumber, testVal, amount, task.getAccount().getAccountNumber(), getLastDayAndYear(), responseLien.getBody(), valGen, "SINGLE");
+                                insertUnprocessedSingle(entry.getValue(), task.getTable(), accountNumber, testVal, amount, task.getAccount().getAccountNumber(),getNarration(task.getTable(),entry.getValue()), responseLien.getBody(), valGen, "SINGLE");
                             } else {
                                 lienResponse = responseLien.getBody().getResponseDescription();
                                 appCode = responseLien.getBody().getAppNumber();
@@ -1211,7 +1229,7 @@ public class TransactionServiceImpl implements TransactionService {
                     logger.error(e.getMessage());
                 }
             }
-            String filename = saveExcelDataLog(task1, logData(task), Constants.SUCCESSFUL_TRXN);
+            String filename = saveExcelDataLog(task1, logData(task, task1), Constants.SUCCESSFUL_TRXN);
             List<User> userList = userRepository.findAll();
 
 
@@ -1373,7 +1391,38 @@ public class TransactionServiceImpl implements TransactionService {
         return false;
     }
 
+    private String getNarration(DataTable datatable, Long id) throws SQLException {
+        PreparedStatement statement = null;
+        String narration=null;
+        for(DataColumn dataColumn:datatable.getColumns())
+        {
+            if(dataColumn.getNarration())
+            {
+                narration=dataColumn.getName();
+            }
+        }
+        try
+        {
 
+            StringBuilder builder = new StringBuilder("SELECT * FROM custom.");
+            builder.append(datatable.getName()).append(" WHERE id="+id+"");
+            statement = connection.prepareStatement(builder.toString());
+            ResultSet resultSet = statement.executeQuery();
+            if (resultSet.next()) {
+                narration=resultSet.getString(narration);
+            }
+        }
+        finally {
+            if (statement != null) {
+                try {
+                    statement.close();
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            }
+        }
+        return narration;
+    }
     @Override
     public List<InsufficientBalance> getUnprocessedDinsertataInsufficientFund(DataTable datatable, DataUpload dataUpload) throws SQLException, InvalidDataException {
 
@@ -1693,34 +1742,27 @@ public class TransactionServiceImpl implements TransactionService {
         return taskRepository.findAll();
     }
 
-    public String getLastDayAndYear() {
-        Calendar calendar = Calendar.getInstance();
-        calendar.add(Calendar.MONTH, -1);
-        calendar.add(Calendar.YEAR, -1);
-        Date date = calendar.getTime();
 
-        Calendar cal = Calendar.getInstance();
-        SimpleDateFormat format = new SimpleDateFormat("MMM");
-        SimpleDateFormat format1 = new SimpleDateFormat("yyyy");
-        String dateOutput = format.format(date);
-        String yearOutput = format1.format(date);
+    public String getLastDayAndYearCorrect() {
+        LocalDate currentDate = LocalDate.now();
+        DayOfWeek dow = currentDate.getDayOfWeek();
+        int dom = currentDate.getDayOfMonth();
+        Month m = currentDate.getMonth();
+        int y = currentDate.getYear();
 
-        if (new SimpleDateFormat("MMM").format(cal.getTime()).equalsIgnoreCase("January")) {
-            return smsMessage + " December," + yearOutput;
-        }
-        return smsMessage + " " + dateOutput + ", " + new SimpleDateFormat("yyyy").format(cal.getTime());
+        return " " + dow + " " + m +" "+dom+ ", " + y;
     }
 
     private void sendMail(List<User> userList, String filename, DataUpload dataUpload, InputStreamSource inputStreamResource) {
         String message = null;
         for (User user : userList) {
             Map<String, Object> variables = GenericUtil.getUploadDetails(dataUpload, user);
-            variables.put("DateValue", getLastDayAndYear());
+            variables.put("DateValue", getLastDayAndYearCorrect());
             message = mailBuilder.build(Constants.SUCCESSFUL_UPLOAD, variables);
             System.out.println("****Email sent to***** : " + user.getEmail());
             filename = filename + ".xlsx";
             try {
-                mailer.mailUserAsyncAttach(user.getEmail(), message, Constants.SUCCESS_SUBJECT, filename, inputStreamResource);
+                mailer.mailUserAsyncAttach(user.getEmail(), message, Constants.SUCCESS_SUBJECT + " " + getLastDayAndYearCorrect(), filename, inputStreamResource);
             } catch (MessagingException e) {
                 e.printStackTrace();
             }

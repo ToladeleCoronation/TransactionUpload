@@ -16,6 +16,7 @@ public interface UserService {
 	User findByPhoneNumber(String phoneNumber);
 	User findById(Long userId);
     User update(User prev, User current);
+	User disable(User prev);
     User delete(User user);
 	User assignRole(User user, Role role);
 	List<User> findByRoleName(String roleName);
