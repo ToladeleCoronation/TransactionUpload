@@ -29,7 +29,7 @@ public class ConnectionController {
         this.connectionService = connectionService;
     }
 
-    @PreAuthorize("hasAnyRole('INITIALIZER')")
+    @PreAuthorize("hasAnyRole('INITIATOR')")
     @PostMapping
     public ResponseEntity<DataConnection> create(@RequestBody @Valid DataConnection connection,
                                              BindingResult bindingResult) {
@@ -49,7 +49,7 @@ public class ConnectionController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('INITIALIZER')")
+    @PreAuthorize("hasAnyRole('INITIATOR')")
     public ResponseEntity<DataConnection> edit(@PathVariable("id") Long id, @RequestBody @Valid DataConnection connection,
                                                BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {

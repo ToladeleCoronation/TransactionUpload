@@ -1,16 +1,18 @@
 package com.coronation.upload.services.impl;
 
-import com.coronation.upload.domain.AccountReport;
-import com.coronation.upload.domain.AccountReportInsufficient;
-import com.coronation.upload.domain.DataColumn;
-import com.coronation.upload.domain.DataTable;
+import com.coronation.upload.domain.*;
 import com.coronation.upload.services.AccountReportService;
+import com.coronation.upload.util.ExcelSaver;
+import com.coronation.upload.util.GenericUtil;
 import org.springframework.stereotype.Service;
 
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -78,7 +80,7 @@ public class AccountReportImpl implements AccountReportService {
     @Override
     public List<AccountReportInsufficient> insufficientBalance(String upload_id, DataTable dataTable) throws SQLException {
         List<AccountReportInsufficient> AccountReportInsufficient = new ArrayList<>();
-        System.out.println(upload_id+ " sup nropp");
+        System.out.println(upload_id + " sup nropp");
         StringBuilder builder = new StringBuilder("select * from ").
                 append(" custom.").
                 append(dataTable.getInsufficientBalance()).append(" where account_number='" + upload_id + "'");
@@ -115,4 +117,92 @@ public class AccountReportImpl implements AccountReportService {
         }
         return AccountReportInsufficient;
     }
+
+    @Override
+    public String getCompleteListOfAccountReport(DataTable dataTable, String phoneNumber, String accountNumber) throws SQLException, IOException {
+        String identifier = null;
+        Long insufficient = dataTable.getId();
+        String accountNum = null;
+        String numAccount = null;
+        List<AccountReport> accountReports = new ArrayList<>();
+        List<List<String>> savedData = new ArrayList<>();
+
+        for (DataColumn column : dataTable.getColumns()) {
+            if (column.getIdentifier()) {
+                identifier = column.getName();
+            }
+        }
+        DataColumn val = new DataColumn();
+        val.setName("account_number");
+
+        DataColumn val1 = new DataColumn();
+        val1.setName("response_code");
+
+        DataColumn val2 = new DataColumn();
+        val2.setName("response_message");
+
+
+        DataColumn val3 = new DataColumn();
+        val3.setName("Account Number");
+
+        DataColumn val4 = new DataColumn();
+        val4.setName("Debit Status");
+
+        DataColumn val5 = new DataColumn();
+        val5.setName("Debit Status Message");
+
+        StringBuilder builder = new StringBuilder("select ");
+        List<DataColumn> myDataColumn = dataTable.getColumns();
+        List<DataColumn> myDataHeader = dataTable.getColumns();
+
+        myDataColumn.add(val);
+        myDataColumn.add(val1);
+        myDataColumn.add(val2);
+        for (DataColumn dataColumn : myDataColumn) {
+            builder.append(dataColumn.getName() + ",");
+        }
+        builder.deleteCharAt(builder.lastIndexOf(","));
+        builder.append(" from ").
+                append("custom.").
+                append(dataTable.getName()).append(" where account_number like '%" + accountNumber +
+                "%' or " + identifier + " like '%" + phoneNumber + "%'");
+        System.out.println("i am the identifier: " + builder);
+        PreparedStatement statement = connection.prepareStatement(builder.toString());
+        ResultSet resultSet = statement.executeQuery();
+
+        try {
+            while (resultSet.next()) {
+                List<String> data = new ArrayList<>();
+                accountNum = resultSet.getString("account_number");
+                myDataColumn.forEach(c -> {
+                    try {
+                        data.add(resultSet.getString(c.getName()));
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                    }
+                });
+                savedData.add(data);
+
+            }
+        } finally {
+            if (statement != null) {
+                try {
+                    statement.close();
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            }
+        }
+        accountNum = LocalDate.now() + "_" + accountNum + ".xlsx";
+        myDataHeader.add(val3);
+        myDataHeader.add(val4);
+        myDataHeader.add(val5);
+
+        ExcelSaver.createLogFile(myDataHeader, savedData,
+                GenericUtil.getStoragePath() + accountNum);
+        return accountNum;
+
+    }
+
+
 }

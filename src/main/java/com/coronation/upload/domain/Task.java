@@ -1,6 +1,7 @@
 package com.coronation.upload.domain;
 
 import javax.persistence.*;
+import javax.validation.constraints.Email;
 import javax.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -33,6 +34,11 @@ public class Task {
     private Boolean amountInData = Boolean.FALSE;
 
     private String description;
+
+    @NotNull
+    @Email
+    @Column(name = "senderEmail")
+    private String senderEmail;
 
     @ManyToOne
     @JoinColumn(nullable = false)
@@ -213,5 +219,13 @@ public class Task {
 
     public void setBulkPayment(Boolean bulkPayment) {
         this.bulkPayment = bulkPayment;
+    }
+
+    public String getSenderEmail() {
+        return senderEmail;
+    }
+
+    public void setSenderEmail(String senderEmail) {
+        this.senderEmail = senderEmail;
     }
 }

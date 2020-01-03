@@ -61,7 +61,7 @@ public class UploadController {
     }
 
 
-    @PreAuthorize("hasAnyRole('INITIALIZER')")
+    @PreAuthorize("hasAnyRole('INITIATOR')")
     @PostMapping("/tasks/{taskId}/files")
     public ResponseEntity<DataUpload> upload(@PathVariable("taskId") Long taskId,
                                              @RequestParam("file") MultipartFile[] files) {
@@ -86,7 +86,7 @@ public class UploadController {
                 message = mailBuilder.build(Constants.UPLOAD_CREATED, variables);
                 System.out.println("****Email sent to***** : " + user.getEmail());
                 try {
-                    mailer.mailUserAsync(user, message, Constants.UPLOAD_SUBJECT);
+                    mailer.mailUserAsync(user, message, Constants.UPLOAD_SUBJECT,task.getSenderEmail());
                 } catch (MessagingException e) {
                     e.printStackTrace();
                 }

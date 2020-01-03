@@ -3,6 +3,7 @@ package com.coronation.upload.controllers;
 import com.coronation.upload.domain.*;
 import com.coronation.upload.domain.enums.GenericStatus;
 import com.coronation.upload.services.*;
+import com.coronation.upload.util.GenericUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -41,13 +42,17 @@ public class TaskController {
         this.transactionService = transactionService;
     }
 
-    @PreAuthorize("hasAnyRole('INITIALIZER')")
+    @PreAuthorize("hasAnyRole('INITIATOR')")
     @PostMapping("/schedules/{scheduleId}/connections/{connectionId}/tables/{tableId}/accounts/{accountId}")
     public ResponseEntity<Task> create(@RequestBody @Valid Task task, BindingResult bindingResult,
            @PathVariable("scheduleId") Long scheduleId, @PathVariable("connectionId") Long connectionId,
            @PathVariable("tableId") Long tableId, @PathVariable("accountId") Long accountId) {
         if (bindingResult.hasErrors() || (!task.getAmountInData() && (task.getCharge() == null ||
                 task.getCharge().compareTo(BigDecimal.ZERO) <= 0))) {
+            return ResponseEntity.badRequest().build();
+        }
+        if(!GenericUtil.isStaffEmail(task.getSenderEmail()))
+        {
             return ResponseEntity.badRequest().build();
         }
 
@@ -79,7 +84,7 @@ public class TaskController {
         return ResponseEntity.ok(taskService.saveTask(task, connection, schedule, table, account));
     }
 
-    @PreAuthorize("hasAnyRole('INITIALIZER')")
+    @PreAuthorize("hasAnyRole('INITIATOR')")
     @PostMapping("/{id}/schedules/{scheduleId}/connections/{connectionId}/tables/{tableId}/accounts/{accountId}")
     public ResponseEntity<Task> edit(@PathVariable("id") Long id,
              @PathVariable("scheduleId") Long scheduleId, @PathVariable("connectionId") Long connectionId,
@@ -87,6 +92,10 @@ public class TaskController {
                          @RequestBody @Valid Task task, BindingResult bindingResult) {
         if (bindingResult.hasErrors() || (!task.getAmountInData() && (task.getCharge() == null ||
                 task.getCharge().compareTo(BigDecimal.ZERO) <= 0))) {
+            return ResponseEntity.badRequest().build();
+        }
+        if(!GenericUtil.isStaffEmail(task.getSenderEmail()))
+        {
             return ResponseEntity.badRequest().build();
         }
 
@@ -125,7 +134,7 @@ public class TaskController {
         return ResponseEntity.ok(taskService.findById(id));
     }
 
-    @PreAuthorize("hasAnyRole('INITIALIZER')")
+    @PreAuthorize("hasAnyRole('INITIATOR')")
     @PostMapping("/{id}/process")
     public ResponseEntity processTask(@PathVariable("id") Long id) throws SQLException {
         Task task = taskService.findById(id);

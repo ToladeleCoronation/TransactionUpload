@@ -30,7 +30,7 @@ public class AccountController {
         this.accountService = accountService;
     }
 
-    @PreAuthorize("hasRole('INITIALIZER')")
+    @PreAuthorize("hasRole('INITIATOR')")
     @PostMapping("/number/{accountNumber}")
     public ResponseEntity<Account> create(@PathVariable("accountNumber") String accountNumber) {
         if (accountService.findByAccountNumber(accountNumber) != null) {

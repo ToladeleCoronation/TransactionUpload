@@ -28,6 +28,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mail.MailSendException;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -306,15 +307,14 @@ public class TransactionServiceImpl implements TransactionService {
         System.out.println("hello sir " + dataUpload.getId());
         List<LogExporter> logExporter = new ArrayList<>();
         String identifier = null;
-        String narration=null;
+        String narration = null;
         for (DataColumn column : task.getTable().getColumns()) {
             if (column.getIdentifier()) {
                 identifier = column.getName();
             }
 
-            if(column.getNarration())
-            {
-                narration=column.getName();
+            if (column.getNarration()) {
+                narration = column.getName();
             }
         }
         PreparedStatement statement = null;
@@ -565,7 +565,7 @@ public class TransactionServiceImpl implements TransactionService {
         }
         credit.setCurrencyCode(Constants.accountCode);
         rec.setTrnAmt(credit);
-        rec.setTrnParticulars(getNarration(task.getTable(),ids.get(0)));
+        rec.setTrnParticulars(getNarration(task.getTable(), ids.get(0)));
         //request.setUniqueIdentifier(generateTransactionId());
 
         reequest.add(rec);
@@ -575,7 +575,7 @@ public class TransactionServiceImpl implements TransactionService {
         recDeb.setSerialNum(Constants.serialNum2);
         debit1.setCurrencyCode(Constants.accountCode);
         recDeb.setTrnAmt(debit1);
-        recDeb.setTrnParticulars(getNarration(task.getTable(),ids.get(0)));
+        recDeb.setTrnParticulars(getNarration(task.getTable(), ids.get(0)));
 
         reequest.add(recDeb);
         trxnRequest.setRecs(reequest);
@@ -621,7 +621,7 @@ public class TransactionServiceImpl implements TransactionService {
         }
         credit.setCurrencyCode(Constants.accountCode);
         rec.setTrnAmt(credit);
-        rec.setTrnParticulars(getNarration(task.getTable(),ids));
+        rec.setTrnParticulars(getNarration(task.getTable(), ids));
         //request.setUniqueIdentifier(generateTransactionId());
 
         reequest.add(rec);
@@ -632,7 +632,7 @@ public class TransactionServiceImpl implements TransactionService {
         debit1.setCurrencyCode(Constants.accountCode);
 
         recDeb.setTrnAmt(debit1);
-        recDeb.setTrnParticulars(getNarration(task.getTable(),ids));
+        recDeb.setTrnParticulars(getNarration(task.getTable(), ids));
 
         reequest.add(recDeb);
         trxnRequest.setRecs(reequest);
@@ -978,7 +978,6 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
 
-    @Async
     @Override
     public void processTask(Task task) throws SQLException {
         if (task.getBulkPayment() == true) {
@@ -996,128 +995,133 @@ public class TransactionServiceImpl implements TransactionService {
     private void bulkPayment(Task task) {
         try {
 
-            DataUpload task1 = uploadRepository.findByTaskAndStatus(task, GenericStatus.ACTIVE);
+            List<DataUpload> task2 = uploadRepository.findByTaskAndStatus(task, GenericStatus.ACTIVE);
+            for (DataUpload task1 : task2) {
+                System.out.println("**** upload id is: " + task1.getId());
+                Map<String, List<Long>> unprocessed = getUnprocessedData(task.getTable(), task1.getId());
 
-            System.out.println("**** upload id is: " + task1.getId());
-            Map<String, List<Long>> unprocessed = getUnprocessedData(task.getTable(), task1.getId());
-            logger.info(JsonConverter.getJson(unprocessed));
-            String testVal = null;
-            String uniqueVal = null;
-            String pNum = null;
-            BigDecimal currentval = new BigDecimal(0);
-            for (Map.Entry<String, List<Long>> entry : unprocessed.entrySet()) {
-                String accountNumber = null;
+                String testVal = null;
+                String uniqueVal = null;
+                String pNum = null;
+                BigDecimal currentval = new BigDecimal(0);
+                if (unprocessed != null) {
+                    logger.info(JsonConverter.getJson(unprocessed));
+                    for (Map.Entry<String, List<Long>> entry : unprocessed.entrySet()) {
+                        String accountNumber = null;
 
-                if (task.getAccountInData()) {
-                    accountNumber = entry.getKey();
-                } else {
-                    DataColumn identifierColumn = null;
-                    for (DataColumn column : task.getTable().getColumns()) {
-                        if (column.getIdentifier()) {
-                            identifierColumn = column;
-                            break;
-                        }
-                    }
-                    if (identifierColumn != null) {
-                        Object identifier = null;
-                        switch (identifierColumn.getDataType()) {
-                            case LONG:
-                                identifier = Long.getLong(entry.getKey());
-                                break;
-                            case INTEGER:
-                                identifier = Integer.parseInt(entry.getKey());
-                                break;
-                            case VARCHAR:
-                                identifier = entry.getKey();
-                                break;
-                        }
-
-                        try {
-                            String identify = identifier.toString();
-                            uniqueVal = identify;
-                            identify = identify.trim().replaceAll("[(-),+]", "");
-                            identify = identify.replaceAll(" ", "");
-                            if (identify.length() > 9) {
-                                testVal = identify.substring(identify.length() - 10);
+                        if (task.getAccountInData()) {
+                            accountNumber = entry.getKey();
+                        } else {
+                            DataColumn identifierColumn = null;
+                            for (DataColumn column : task.getTable().getColumns()) {
+                                if (column.getIdentifier()) {
+                                    identifierColumn = column;
+                                    break;
+                                }
                             }
-                            accountNumber = getAccountNumber(identifier, task, testVal);
+                            if (identifierColumn != null) {
+                                Object identifier = null;
+                                switch (identifierColumn.getDataType()) {
+                                    case LONG:
+                                        identifier = Long.getLong(entry.getKey());
+                                        break;
+                                    case INTEGER:
+                                        identifier = Integer.parseInt(entry.getKey());
+                                        break;
+                                    case VARCHAR:
+                                        identifier = entry.getKey();
+                                        break;
+                                }
+
+                                try {
+                                    String identify = identifier.toString();
+                                    uniqueVal = identify;
+                                    identify = identify.trim().replaceAll("[(-),+]", "");
+                                    identify = identify.replaceAll(" ", "");
+                                    if (identify.length() > 9) {
+                                        testVal = identify.substring(identify.length() - 10);
+                                    }
+                                    accountNumber = getAccountNumber(identifier, task, testVal);
 //                            System.out.println(testVal + " val val" + accountNumber);
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                    logger.error(e.getMessage());
+                                    continue;
+                                }
+                            } else {
+                                continue;
+                            }
+                        }
+                        try {
+                            if (accountNumber == null) {
+
+                            } else {
+                                String valGen = generateTransactionId();
+                                String debitTrxnId = generateTransactionId1();
+                                String lienResponse = null;
+                                String appCode = null;
+                                if (task.getAmountInData()) {
+                                    currentval = getDebitSum(entry.getValue(), task);
+
+                                    // System.out.println(amount+ "what are you doing here");
+
+                                } else {
+                                    currentval = task.getCharge().multiply(new BigDecimal(entry.getValue().size()));
+
+                                    // System.out.println(task.getCharge()+ " this is it"+ amount);
+                                }
+                                ResponseEntity<TransferResponses> responseEntity = processTransaction
+                                        (entry.getValue(), accountNumber, task, debitTrxnId);
+
+                                if (responseEntity.getBody().getResponseDescription().contains(Constants.INSUFFICIENT_FUND)) {
+
+                                    ResponseEntity<LienResponse> responseLien = processTransactionInsufficient(currentval, accountNumber, valGen);
+                                    logger.info("My value==>>>>: " + JsonConverter.getJson(responseLien));
+                                    if (responseLien.getBody().getStatus().equals(Constants.STATUS)) {
+                                        //updateProcessedData(entry.getValue(), task.getTable(), responseEntity.getBody(), responseLien.getBody());
+                                        insertUnprocessedSingle(entry.getValue().get(0), task.getTable(), accountNumber, testVal, currentval, task.getAccount().getAccountNumber(), getNarration(task.getTable(), entry.getValue().get(0)), responseLien.getBody(), valGen, "BULK");
+                                    } else {
+
+                                        lienResponse = responseLien.getBody().getResponseDescription();
+                                        appCode = responseLien.getBody().getAppNumber();
+
+
+                                    }
+
+                                }
+                                updateProcessedDataBulk(entry.getValue(), task.getTable(), responseEntity.getBody(), debitTrxnId, lienResponse, appCode, accountNumber, currentval);
+
+
+                                logger.info(JsonConverter.getJson(entry.getValue() + " value is this " + responseEntity.getBody()));
+                            }
+
                         } catch (Exception e) {
                             e.printStackTrace();
                             logger.error(e.getMessage());
-                            continue;
                         }
-                    } else {
-                        continue;
                     }
-                }
-                try {
-                    if (accountNumber == null) {
+                    List<User> userList = userRepository.findAll();
+                    String filename = saveExcelDataLog(task1, logData(task, task1), Constants.SUCCESSFUL_TRXN);
 
-                    } else {
-                        String valGen = generateTransactionId();
-                        String debitTrxnId = generateTransactionId1();
-                        String lienResponse = null;
-                        String appCode = null;
-                        if (task.getAmountInData()) {
-                            currentval = getDebitSum(entry.getValue(), task);
-
-                            // System.out.println(amount+ "what are you doing here");
-
-                        } else {
-                            currentval = task.getCharge().multiply(new BigDecimal(entry.getValue().size()));
-
-                            // System.out.println(task.getCharge()+ " this is it"+ amount);
+                    InputStreamSource iss = new InputStreamSource() {
+                        @Override
+                        public InputStream getInputStream() throws IOException {
+                            // provide fresh InputStream
+                            return new FileInputStream(GenericUtil.getStoragePath() + filename);
                         }
-                        ResponseEntity<TransferResponses> responseEntity = processTransaction
-                                (entry.getValue(), accountNumber, task, debitTrxnId);
+                    };
 
-                        if (responseEntity.getBody().getResponseDescription().contains(Constants.INSUFFICIENT_FUND)) {
+                    sendMail(userList.stream().filter(user -> user.getDeleted() == false)
+                            .collect(Collectors.toList()), filename, task1, iss, task.getSenderEmail());
+                    System.out.println(filename + " hiya");
+                    task1.setSuccessfulDedbit(filename+".xlsx");
+                    uploadRepository.saveAndFlush(task1);
 
-                            ResponseEntity<LienResponse> responseLien = processTransactionInsufficient(currentval, accountNumber, valGen);
-                            logger.info("My value==>>>>: " + JsonConverter.getJson(responseLien));
-                            if (responseLien.getBody().getStatus().equals(Constants.STATUS)) {
-                                //updateProcessedData(entry.getValue(), task.getTable(), responseEntity.getBody(), responseLien.getBody());
-                                insertUnprocessedSingle(entry.getValue().get(0), task.getTable(), accountNumber, testVal, currentval, task.getAccount().getAccountNumber(), getNarration(task.getTable(),entry.getValue().get(0)), responseLien.getBody(), valGen, "BULK");
-                            } else {
-
-                                lienResponse = responseLien.getBody().getResponseDescription();
-                                appCode = responseLien.getBody().getAppNumber();
-
-
-                            }
-
-                        }
-                        updateProcessedDataBulk(entry.getValue(), task.getTable(), responseEntity.getBody(), debitTrxnId, lienResponse, appCode, accountNumber, currentval);
-
-
-                        logger.info(JsonConverter.getJson(entry.getValue() + " value is this " + responseEntity.getBody()));
-                    }
-
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    logger.error(e.getMessage());
                 }
+
+
             }
-            List<User> userList = userRepository.findAll();
-            String filename = saveExcelDataLog(task1, logData(task, task1), Constants.SUCCESSFUL_TRXN);
-
-            InputStreamSource iss = new InputStreamSource() {
-                @Override
-                public InputStream getInputStream() throws IOException {
-                    // provide fresh InputStream
-                    return new FileInputStream(GenericUtil.getStoragePath() + filename);
-                }
-            };
-
-            sendMail(userList.stream().filter(user -> user.getDeleted() == false)
-                    .collect(Collectors.toList()), filename, task1, iss);
-            System.out.println(filename + " hiya");
-            task1.setSuccessfulDedbit(filename);
-            uploadRepository.saveAndFlush(task1);
-
-
-        } catch (SQLException | InvalidDataException | IOException e) {
+        } catch (SQLException | InvalidDataException | IOException | MailSendException e) {
             e.printStackTrace();
             logger.error(e.getMessage());
         }
@@ -1125,129 +1129,129 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
 
-
-
     private void singlePayment(Task task) {
         try {
-            DataUpload task1 = uploadRepository.findByTaskAndStatus(task, GenericStatus.ACTIVE);
+            List<DataUpload> task2 = uploadRepository.findByTaskAndStatus(task, GenericStatus.ACTIVE);
+            for (DataUpload task1 : task2) {
+                System.out.println("**** upload id is: " + task1.getId());
+                Multimap<String, Long> unprocessed = getBulkUnprocessedData(task.getTable(), task1.getId());
+                String testVal = null;
+                if (unprocessed != null) {
 
-            System.out.println("**** upload id is: " + task1.getId());
-            Multimap<String, Long> unprocessed = getBulkUnprocessedData(task.getTable(), task1.getId());
-            String testVal = null;
+                    for (Map.Entry<String, Long> entry : unprocessed.entries()) {
+                        String accountNumber = null;
+                        String pNum = null;
+                        BigDecimal amount = new BigDecimal(0);
 
-            for (Map.Entry<String, Long> entry : unprocessed.entries()) {
-                String accountNumber = null;
-                String pNum = null;
-                BigDecimal amount = new BigDecimal(0);
-
-                if (task.getAccountInData()) {
-                    accountNumber = entry.getKey();
-                } else {
-                    DataColumn identifierColumn = null;
-                    for (DataColumn column : task.getTable().getColumns()) {
-                        if (column.getIdentifier()) {
-                            identifierColumn = column;
-                            break;
-                        }
-                    }
-                    if (identifierColumn != null) {
-                        Object identifier = null;
-                        switch (identifierColumn.getDataType()) {
-                            case LONG:
-                                identifier = Long.getLong(entry.getKey());
-                                break;
-                            case INTEGER:
-                                identifier = Integer.parseInt(entry.getKey());
-                                break;
-                            case VARCHAR:
-                                identifier = entry.getKey();
-                                break;
+                        if (task.getAccountInData()) {
+                            accountNumber = entry.getKey();
+                        } else {
+                            DataColumn identifierColumn = null;
+                            for (DataColumn column : task.getTable().getColumns()) {
+                                if (column.getIdentifier()) {
+                                    identifierColumn = column;
+                                    break;
+                                }
+                            }
+                            if (identifierColumn != null) {
+                                Object identifier = null;
+                                switch (identifierColumn.getDataType()) {
+                                    case LONG:
+                                        identifier = Long.getLong(entry.getKey());
+                                        break;
+                                    case INTEGER:
+                                        identifier = Integer.parseInt(entry.getKey());
+                                        break;
+                                    case VARCHAR:
+                                        identifier = entry.getKey();
+                                        break;
+                                }
+                                try {
+                                    String identify = identifier.toString();
+                                    identify = identify.trim().replaceAll("[(-),+]", "");
+                                    identify = identify.replaceAll(" ", "");
+                                    if (identify.length() > 9) {
+                                        testVal = identify.substring(identify.length() - 10);
+                                    }
+                                    accountNumber = getAccountNumber(identifier, task, testVal);
+//                            System.out.println(testVal + " val val" + accountNumber);
+                                    pNum = identifier.toString();
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                    logger.error(e.getMessage());
+                                    continue;
+                                }
+                            } else {
+                                continue;
+                            }
                         }
                         try {
-                            String identify = identifier.toString();
-                            identify = identify.trim().replaceAll("[(-),+]", "");
-                            identify = identify.replaceAll(" ", "");
-                            if (identify.length() > 9) {
-                                testVal = identify.substring(identify.length() - 10);
+                            if (accountNumber == null) {
+
+                            } else {
+                                String valGen = generateTransactionId();
+                                String debitTrxnId = generateTransactionId1();
+                                String lienResponse = null;
+                                String appCode = null;
+                                if (task.getAmountInData()) {
+                                    amount = getDebitSumSingle(entry.getValue(), task);
+
+                                    // System.out.println(amount+ "what are you doing here");
+
+                                } else {
+                                    amount = task.getCharge().multiply(new BigDecimal(1));
+
+                                    // System.out.println(task.getCharge()+ " this is it"+ amount);
+                                }
+                                ResponseEntity<TransferResponses> responseEntity = processTransactionSingle
+                                        (entry.getValue(), accountNumber, task, debitTrxnId);
+
+                                if (responseEntity.getBody().getResponseDescription().contains(Constants.INSUFFICIENT_FUND)) {
+
+                                    ResponseEntity<LienResponse> responseLien = processTransactionInsufficient(amount, accountNumber, valGen);
+                                    logger.info("My value==>>>>: " + JsonConverter.getJson(responseLien));
+                                    if (responseLien.getBody().getStatus().equals(Constants.STATUS)) {
+                                        //updateProcessedData(entry.getValue(), task.getTable(), responseEntity.getBody(), responseLien.getBody());
+
+                                        insertUnprocessedSingle(entry.getValue(), task.getTable(), accountNumber, testVal, amount, task.getAccount().getAccountNumber(), getNarration(task.getTable(), entry.getValue()), responseLien.getBody(), valGen, "SINGLE");
+                                    } else {
+                                        lienResponse = responseLien.getBody().getResponseDescription();
+                                        appCode = responseLien.getBody().getAppNumber();
+
+                                    }
+
+                                }
+                                updateProcessedDataA(entry.getValue(), task.getTable(), responseEntity.getBody(), debitTrxnId, lienResponse, appCode, accountNumber, amount);
+
+
+                                logger.info(JsonConverter.getJson(entry.getValue() + " value is this " + responseEntity.getBody()));
                             }
-                            accountNumber = getAccountNumber(identifier, task, testVal);
-//                            System.out.println(testVal + " val val" + accountNumber);
-                            pNum = identifier.toString();
+
                         } catch (Exception e) {
                             e.printStackTrace();
                             logger.error(e.getMessage());
-                            continue;
                         }
-                    } else {
-                        continue;
                     }
                 }
-                try {
-                    if (accountNumber == null) {
-
-                    } else {
-                        String valGen = generateTransactionId();
-                        String debitTrxnId = generateTransactionId1();
-                        String lienResponse = null;
-                        String appCode = null;
-                        if (task.getAmountInData()) {
-                            amount = getDebitSumSingle(entry.getValue(), task);
-
-                            // System.out.println(amount+ "what are you doing here");
-
-                        } else {
-                            amount = task.getCharge().multiply(new BigDecimal(1));
-
-                            // System.out.println(task.getCharge()+ " this is it"+ amount);
-                        }
-                        ResponseEntity<TransferResponses> responseEntity = processTransactionSingle
-                                (entry.getValue(), accountNumber, task, debitTrxnId);
-
-                        if (responseEntity.getBody().getResponseDescription().contains(Constants.INSUFFICIENT_FUND)) {
-
-                            ResponseEntity<LienResponse> responseLien = processTransactionInsufficient(amount, accountNumber, valGen);
-                            logger.info("My value==>>>>: " + JsonConverter.getJson(responseLien));
-                            if (responseLien.getBody().getStatus().equals(Constants.STATUS)) {
-                                //updateProcessedData(entry.getValue(), task.getTable(), responseEntity.getBody(), responseLien.getBody());
-
-                                insertUnprocessedSingle(entry.getValue(), task.getTable(), accountNumber, testVal, amount, task.getAccount().getAccountNumber(),getNarration(task.getTable(),entry.getValue()), responseLien.getBody(), valGen, "SINGLE");
-                            } else {
-                                lienResponse = responseLien.getBody().getResponseDescription();
-                                appCode = responseLien.getBody().getAppNumber();
-
-                            }
-
-                        }
-                        updateProcessedDataA(entry.getValue(), task.getTable(), responseEntity.getBody(), debitTrxnId, lienResponse, appCode, accountNumber, amount);
+                String filename = saveExcelDataLog(task1, logData(task, task1), Constants.SUCCESSFUL_TRXN);
+                List<User> userList = userRepository.findAll();
 
 
-                        logger.info(JsonConverter.getJson(entry.getValue() + " value is this " + responseEntity.getBody()));
+                InputStreamSource iss = new InputStreamSource() {
+                    @Override
+                    public InputStream getInputStream() throws IOException {
+                        // provide fresh InputStream
+                        return new FileInputStream(GenericUtil.getStoragePath() + filename);
                     }
+                };
 
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    logger.error(e.getMessage());
-                }
+                sendMail(userList.stream().filter(user -> user.getDeleted() == false)
+                        .collect(Collectors.toList()), filename, task1, iss, task.getSenderEmail());
+                System.out.println(filename + " hiya");
+                task1.setSuccessfulDedbit(filename+".xlsx");
+                uploadRepository.saveAndFlush(task1);
+
             }
-            String filename = saveExcelDataLog(task1, logData(task, task1), Constants.SUCCESSFUL_TRXN);
-            List<User> userList = userRepository.findAll();
-
-
-            InputStreamSource iss = new InputStreamSource() {
-                @Override
-                public InputStream getInputStream() throws IOException {
-                    // provide fresh InputStream
-                    return new FileInputStream(GenericUtil.getStoragePath() + filename);
-                }
-            };
-
-            sendMail(userList.stream().filter(user -> user.getDeleted() == false)
-                    .collect(Collectors.toList()), filename, task1, iss);
-            System.out.println(filename + " hiya");
-            task1.setSuccessfulDedbit(filename);
-            uploadRepository.saveAndFlush(task1);
-
-
         } catch (SQLException | InvalidDataException | IOException e) {
             e.printStackTrace();
             logger.error(e.getMessage());
@@ -1327,16 +1331,16 @@ public class TransactionServiceImpl implements TransactionService {
         return tableRepository.findAll();
     }
 
-    @Async
     @Override
     public void processInsufficientBalance(DataTable dataTable) throws InvalidDataException, SQLException {
 
         Optional<Task> task = taskRepository.findByTable(dataTable);
         if (task.isPresent()) {
-            DataUpload dataUpload = uploadRepository.findByTaskAndStatus(task.get(), GenericStatus.ACTIVE);
+            List<DataUpload> dataUpload = uploadRepository.findByTaskAndStatus(task.get(), GenericStatus.ACTIVE);
 
-
-            updateInsufficientSingle(dataTable, dataUpload);
+            for (DataUpload dataUpload1 : dataUpload) {
+                updateInsufficientSingle(dataTable, dataUpload1);
+            }
 
         }
 
@@ -1393,26 +1397,22 @@ public class TransactionServiceImpl implements TransactionService {
 
     private String getNarration(DataTable datatable, Long id) throws SQLException {
         PreparedStatement statement = null;
-        String narration=null;
-        for(DataColumn dataColumn:datatable.getColumns())
-        {
-            if(dataColumn.getNarration())
-            {
-                narration=dataColumn.getName();
+        String narration = null;
+        for (DataColumn dataColumn : datatable.getColumns()) {
+            if (dataColumn.getNarration()) {
+                narration = dataColumn.getName();
             }
         }
-        try
-        {
+        try {
 
             StringBuilder builder = new StringBuilder("SELECT * FROM custom.");
-            builder.append(datatable.getName()).append(" WHERE id="+id+"");
+            builder.append(datatable.getName()).append(" WHERE id=" + id + "");
             statement = connection.prepareStatement(builder.toString());
             ResultSet resultSet = statement.executeQuery();
             if (resultSet.next()) {
-                narration=resultSet.getString(narration);
+                narration = resultSet.getString(narration);
             }
-        }
-        finally {
+        } finally {
             if (statement != null) {
                 try {
                     statement.close();
@@ -1423,6 +1423,7 @@ public class TransactionServiceImpl implements TransactionService {
         }
         return narration;
     }
+
     @Override
     public List<InsufficientBalance> getUnprocessedDinsertataInsufficientFund(DataTable datatable, DataUpload dataUpload) throws SQLException, InvalidDataException {
 
@@ -1640,6 +1641,7 @@ public class TransactionServiceImpl implements TransactionService {
         return responseEntity;
     }
 
+
     @Override
     public void insertRecordAccountPhone(Task task) throws SQLException {
         Connection connection = null;
@@ -1680,7 +1682,7 @@ public class TransactionServiceImpl implements TransactionService {
                 if (phoneVal.length() > 10) {
                     phoneVal = phoneVal.substring(phoneVal.length() - 10);
                     currentNumberHolder.put(acctDetails.getKey().toString(), phoneVal);
-                } else {
+                } else if (phoneVal.length() < 10) {
                     currentNumberHolder.put(acctDetails.getKey().toString(), phoneVal);
                 }
             }
@@ -1750,10 +1752,10 @@ public class TransactionServiceImpl implements TransactionService {
         Month m = currentDate.getMonth();
         int y = currentDate.getYear();
 
-        return " " + dow + " " + m +" "+dom+ ", " + y;
+        return " " + dow + " " + m + " " + dom + ", " + y;
     }
 
-    private void sendMail(List<User> userList, String filename, DataUpload dataUpload, InputStreamSource inputStreamResource) {
+    private void sendMail(List<User> userList, String filename, DataUpload dataUpload, InputStreamSource inputStreamResource, String senderEmail) {
         String message = null;
         for (User user : userList) {
             Map<String, Object> variables = GenericUtil.getUploadDetails(dataUpload, user);
@@ -1762,7 +1764,7 @@ public class TransactionServiceImpl implements TransactionService {
             System.out.println("****Email sent to***** : " + user.getEmail());
             filename = filename + ".xlsx";
             try {
-                mailer.mailUserAsyncAttach(user.getEmail(), message, Constants.SUCCESS_SUBJECT + " " + getLastDayAndYearCorrect(), filename, inputStreamResource);
+                mailer.mailUserAsyncAttach(user.getEmail(), message, Constants.SUCCESS_SUBJECT + " " + getLastDayAndYearCorrect(), filename, inputStreamResource, senderEmail);
             } catch (MessagingException e) {
                 e.printStackTrace();
             }

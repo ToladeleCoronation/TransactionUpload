@@ -5,9 +5,11 @@ import com.coronation.upload.domain.Task;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.querydsl.QuerydslPredicateExecutor;
 
+import java.util.List;
+
 /**
  * Created by Toyin on 7/30/19.
  */
 public interface UploadRepository extends JpaRepository<DataUpload, Long>, QuerydslPredicateExecutor<DataUpload> {
-    DataUpload findByTaskAndStatus(Task task,Enum status);
+    List<DataUpload> findByTaskAndStatus(Task task, Enum status);
 }

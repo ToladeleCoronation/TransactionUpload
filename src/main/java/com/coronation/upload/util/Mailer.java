@@ -32,10 +32,20 @@ public class Mailer {
         mailData.sendMessage();
         System.out.println("****Message Sent***");
     }
-
+    @Async
+    public void sendMailAsync(MailData mailData,String senderEmail) throws MessagingException {
+        mailData.setFrom(senderEmail);
+        mailData.sendMessage();
+        System.out.println("****Message Sent***");
+    }
     @Async
     public void mailUserAsync(User user, String message, String subject) throws MessagingException {
         mailUserAsync(user.getEmail(), message, subject);
+    }
+
+    @Async
+    public void mailUserAsync(User user, String message, String subject,String senderEmail) throws MessagingException {
+        mailUserAsync(user.getEmail(), message, subject,senderEmail);
     }
 
     @Async
@@ -48,10 +58,16 @@ public class Mailer {
         MailData mailData = new MailData(to, subject, message, mailSender);
         sendMailAsync(mailData);
     }
+
     @Async
-    public void mailUserAsyncAttach(String to, String message, String subject, String fileName, InputStreamSource inputStreamResource) throws MessagingException {
+    public void mailUserAsync(String to, String message, String subject,String senderEmail) throws MessagingException {
+        MailData mailData = new MailData(to, subject, message, mailSender);
+        sendMailAsync(mailData,senderEmail);
+    }
+    @Async
+    public void mailUserAsyncAttach(String to, String message, String subject, String fileName, InputStreamSource inputStreamResource,String senderEmail) throws MessagingException {
         MailData mailData = new MailData(to, subject, message, mailSender,fileName,inputStreamResource);
-        sendMailAsync(mailData);
+        sendMailAsync(mailData,senderEmail);
     }
     @Async
     public void mailUsersAsync(List<User> users, String message, String subject) {

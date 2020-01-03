@@ -5,9 +5,11 @@ import com.coronation.upload.domain.AccountReportInsufficient;
 import com.coronation.upload.domain.DataTable;
 import com.coronation.upload.services.AccountReportService;
 import com.coronation.upload.services.TableService;
+import com.coronation.upload.util.GenericUtil;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
@@ -46,13 +48,32 @@ public class AccountReportController {
     }
 
 
-    @GetMapping(value = "/{accountId}/{insufficientId}")
+    @GetMapping("/{accountId}/{insufficientId}")
     public ResponseEntity<List<AccountReportInsufficient>> getByRole(@PathVariable("accountId") String accountId,
                                                                      @PathVariable("insufficientId") Long insufficientId) throws SQLException {
-        if (accountId == null || insufficientId==null) {
+        if (accountId == null || insufficientId == null) {
             return ResponseEntity.notFound().build();
         }
         DataTable dataTable = tableService.findById(insufficientId);
-        return  ResponseEntity.ok(accountReportService.insufficientBalance(accountId,dataTable));
+        return ResponseEntity.ok(accountReportService.insufficientBalance(accountId, dataTable));
+    }
+
+    @GetMapping("/download")
+    public @ResponseBody
+    byte[] downloadAccountFile(@RequestParam(value = "page", required = false, defaultValue = "0") int page,
+                               @RequestParam(value = "pageSize", defaultValue = "10") int pageSize,
+                               @RequestParam(value = "accountNumber", required = false) String accountNumber,
+                               @RequestParam(value = "phoneNumber", required = false) String phoneNumber,
+                               @RequestParam(value = "id", required = false) Long id) throws SQLException, IOException {
+        List<AccountReport> accountReport = new ArrayList<>();
+
+        DataTable dataTable = tableService.findById(id);
+        try {
+
+
+            return GenericUtil.pathToByteArray(GenericUtil.getStoragePath() + accountReportService.getCompleteListOfAccountReport(dataTable, phoneNumber, accountNumber));
+        } catch (IOException e) {
+            return new byte[0];
+        }
     }
 }

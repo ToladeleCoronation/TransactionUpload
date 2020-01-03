@@ -6,6 +6,7 @@ import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFFont;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.List;
@@ -35,6 +36,7 @@ public class ExcelSaver {
         }
     }
 
+
     public static void createLogFileReport(List<String> columns, List<LogExporter> data, String path)
             throws IOException {
         Workbook workbook = new XSSFWorkbook();
@@ -43,7 +45,7 @@ public class ExcelSaver {
             Sheet sheet = workbook.createSheet("Logs");
             createLogHeader(workbook, sheet, columns);
             createColumnsLogs(workbook, sheet, data);
-
+            path = path + ".xlsx";
             FileOutputStream outputStream = new FileOutputStream(path);
             System.out.println(path + " this is the path to success");
             workbook.write(outputStream);
@@ -74,11 +76,32 @@ public class ExcelSaver {
             headerCell.setCellStyle(headerStyle);
         }
     }
+    private static void createHeaderReport(Workbook workbook, Sheet sheet, List<DataColumn> dataColumns) {
+        Row header = sheet.createRow(0);
+
+        CellStyle headerStyle = workbook.createCellStyle();
+
+        headerStyle.setFillForegroundColor(IndexedColors.LIGHT_BLUE.getIndex());
+        headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        XSSFFont font = ((XSSFWorkbook) workbook).createFont();
+        font.setFontName("Arial");
+        font.setFontHeightInPoints((short) 16);
+        font.setBold(true);
+        headerStyle.setFont(font);
+
+        for (int i = 0; i < dataColumns.size(); i++) {
+            Cell headerCell = header.createCell(i);
+            headerCell.setCellValue(dataColumns.get(i).getName());
+            headerCell.setCellStyle(headerStyle);
+        }
+
+    }
 
     private static void createLogHeader(Workbook workbook, Sheet sheet, List<String> logHeader) {
         Row header = sheet.createRow(0);
 
         CellStyle headerStyle = workbook.createCellStyle();
+        headerStyle.setAlignment(CellStyle.ALIGN_FILL);
 
         headerStyle.setFillForegroundColor(IndexedColors.LIGHT_BLUE.getIndex());
         headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
@@ -87,12 +110,16 @@ public class ExcelSaver {
         font.setFontName("Arial");
         font.setBold(true);
         headerStyle.setFont(font);
+        int length = 0;
 
         for (int i = 0; i < logHeader.size(); i++) {
             Cell headerCell = header.createCell(i);
             headerCell.setCellValue(logHeader.get(i));
+            length = logHeader.get(i).length();
             headerCell.setCellStyle(headerStyle);
+            sheet.autoSizeColumn(i);
         }
+
     }
 
     private static void createColumns(Workbook workbook, Sheet sheet, List<List<String>> dataList) {
@@ -153,8 +180,9 @@ public class ExcelSaver {
             Cell cell7 = row.createCell(7);
             cell7.setCellValue(data.getDateDebitted());
             cell7.setCellStyle(style);
-
+            sheet.autoSizeColumn(index);
             ++index;
         }
+
     }
 }

@@ -1,0 +1,16 @@
+com.coronation
+com.coronation.upload.bootstrap
+com.coronation.upload.configuration
+com.coronation.upload.controllers
+com.coronation.upload.domain
+com.coronation.upload.domain.enums
+com.coronation.upload.dto
+com.coronation.upload.exception
+com.coronation.upload.repo
+com.coronation.upload.repo.predicate
+com.coronation.upload.scheduler
+com.coronation.upload.security
+com.coronation.upload.services
+com.coronation.upload.services.impl
+com.coronation.upload.util
+com.coronation.upload.ws

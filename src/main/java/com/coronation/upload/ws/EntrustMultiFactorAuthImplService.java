@@ -13,7 +13,7 @@ import java.net.URL;
  * Generated source version: 2.2
  * 
  */
-@WebServiceClient(name = "EntrustMultiFactorAuthImplService", targetNamespace = "http://ws.entrustplugin.expertedge.com/", wsdlLocation = "http://132.10.200.201:8080/cmb-entrust-webservicetest/ws?wsdl")
+@WebServiceClient(name = "EntrustMultiFactorAuthImplService", targetNamespace = "http://ws.entrustplugin.expertedge.com/", wsdlLocation = "http://132.10.200.192:8282/cmb-entrust-webservice/ws?wsdl")
 public class EntrustMultiFactorAuthImplService
     extends Service
 {
@@ -26,7 +26,7 @@ public class EntrustMultiFactorAuthImplService
         URL url = null;
         WebServiceException e = null;
         try {
-            url = new URL("http://132.10.200.201:8080/cmb-entrust-webservicetest/ws?wsdl");
+            url = new URL("http://132.10.200.192:8282/cmb-entrust-webservice/ws?wsdl");
         } catch (MalformedURLException ex) {
             e = new WebServiceException(ex);
         }

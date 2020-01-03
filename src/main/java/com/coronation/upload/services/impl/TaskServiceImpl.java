@@ -67,6 +67,7 @@ public class TaskServiceImpl implements TaskService {
         previous.setModifiedAt(LocalDateTime.now());
         previous.setCharge(task.getCharge());
         previous.setFetchTable(task.getFetchTable());
+        previous.setSenderEmail(task.getSenderEmail());
         previous.setFetchColumn(task.getFetchColumn());
         previous.setAccountColumn(task.getAccountColumn());
         previous.setName(task.getName());
